@@ -1,0 +1,18 @@
+[submodule "third-party/chords-db"]
+	path = third-party/chords-db
+	url = https://github.com/tombatossals/chords-db.git
+[submodule "third-party/guitar-chords-db-json"]
+	path = third-party/guitar-chords-db-json
+	url = https://github.com/szaza/guitar-chords-db-json.git
+[submodule "third-party/musthe"]
+	path = third-party/musthe
+	url = https://github.com/gciruelos/musthe.git
+[submodule "third-party/openmusictheory"]
+	path = third-party/openmusictheory
+	url = https://github.com/openmusictheory/openmusictheory.github.io.git
+[submodule "third-party/piano_fundamentals"]
+	path = third-party/piano_fundamentals
+	url = https://github.com/gmoe/piano_fundamentals.git
+[submodule "third-party/music-theory-data"]
+	path = third-party/music-theory-data
+	url = https://github.com/seancolsen/music-theory-data.git
