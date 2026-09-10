@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { chordDisplayName, canonicalTypeForSuffix } from '@shared/engine/chord_engine';
 import { buildChordNotes } from '@shared/engine/music_theory';
-import { nextPosition, openChord, prevPosition } from '@shared/store';
+import { nextPosition, openChord, prevPosition, setPositionIndex } from '@shared/store';
 import {
   selectCurrentPositionIndex,
   selectInstrument,
@@ -123,7 +123,7 @@ export function ChordPage() {
                 <button
                   key={i}
                   type="button"
-                  onClick={() => dispatch(openChord(selectedKey, selectedSuffix))}
+                  onClick={() => dispatch(setPositionIndex(i))}
                   aria-label={`Show voicing ${i + 1}`}
                   className={`rounded-xl border p-2 ${
                     i === positionIndex

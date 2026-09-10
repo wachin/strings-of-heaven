@@ -1,3 +1,4 @@
+import type { ChordDatabase } from '../types';
 import { createAppStore } from '../store';
 import {
   selectChordKey,
@@ -21,6 +22,16 @@ import {
 } from '../store';
 import { toggleTheme } from '../store';
 import { setRoot, setScale } from '../store';
+import { setChordDatabases } from '../engine/chord_engine';
+import guitarChords from '../data/guitar_chords.json';
+import pianoChords from '../data/piano_chords.json';
+import ukuleleChords from '../data/ukulele_chords.json';
+
+setChordDatabases({
+  guitar: guitarChords as unknown as ChordDatabase,
+  piano: pianoChords as unknown as ChordDatabase,
+  ukulele: ukuleleChords as unknown as ChordDatabase,
+});
 
 describe('chords slice', () => {
   it('has a sane initial state', () => {

@@ -17,18 +17,46 @@ import {
 
 export { ALL_KEYS };
 
-import guitarChords from '../data/guitar_chords.json';
-import pianoChords from '../data/piano_chords.json';
-import ukuleleChords from '../data/ukulele_chords.json';
-
-const DATABASES: Record<Instrument, ChordDatabase> = {
-  guitar: guitarChords as unknown as ChordDatabase,
-  piano: pianoChords as unknown as ChordDatabase,
-  ukulele: ukuleleChords as unknown as ChordDatabase,
+// Datasets are loaded lazily (see loadChordDatabases) so bundlers can code-split
+// each instrument's JSON. Unit tests and native apps seed them via
+// setChordDatabases. This keeps the web initial bundle free of chord data.
+const databases: Record<Instrument, ChordDatabase> = {
+  guitar: {},
+  piano: {},
+  ukulele: {},
 };
 
 function databaseFor(instrument: Instrument): ChordDatabase {
-  return DATABASES[instrument];
+  return databases[instrument];
+}
+
+/** Register one or more loaded datasets (used by tests, native, and loaders). */
+export function setChordDatabases(partial: Partial<Record<Instrument, ChordDatabase>>): void {
+  (Object.keys(partial) as Instrument[]).forEach((instrument) => {
+    const db = partial[instrument];
+    if (db) databases[instrument] = db;
+  });
+}
+
+const loaders: Record<Instrument, () => Promise<ChordDatabase>> = {
+  guitar: () => import('../data/guitar_chords.json').then((m) => m.default as ChordDatabase),
+  piano: () => import('../data/piano_chords.json').then((m) => m.default as ChordDatabase),
+  ukulele: () => import('../data/ukulele_chords.json').then((m) => m.default as ChordDatabase),
+};
+
+const loadedInstruments = new Set<Instrument>();
+
+/**
+ * Lazily load (and cache) an instrument's chord dataset. In the web build this
+ * produces a separate chunk per instrument, fetched only when first needed.
+ */
+export async function loadChordDatabases(instrument: Instrument): Promise<ChordDatabase> {
+  if (!loadedInstruments.has(instrument)) {
+    const db = await loaders[instrument]();
+    setChordDatabases({ [instrument]: db });
+    loadedInstruments.add(instrument);
+  }
+  return databases[instrument];
 }
 
 // Defensive normalization of alternate key spellings (e.g. "Csharp" -> "C#").
