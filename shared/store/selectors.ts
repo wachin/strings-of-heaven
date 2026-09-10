@@ -6,6 +6,7 @@ import { ALL_KEYS } from '../constants/theory';
 
 export const selectInstrument = (state: RootState) => state.ui.instrument;
 export const selectTheme = (state: RootState) => state.ui.theme;
+export const selectDataEpoch = (state: RootState) => state.ui.dataEpoch;
 
 export const selectChordsState = (state: RootState) => state.chords;
 export const selectScalesState = (state: RootState) => state.scales;
@@ -16,17 +17,17 @@ export const selectSelectedSuffix = (state: RootState) => state.chords.selectedS
 export const selectAllKeys = () => ALL_KEYS;
 
 export const selectAllSuffixes = createSelector(
-  [selectSelectedKey, selectInstrument],
+  [selectSelectedKey, selectInstrument, selectDataEpoch],
   (key, instrument) => getSuffixes(key, instrument),
 );
 
 export const selectSelectedChord = createSelector(
-  [selectSelectedKey, selectSelectedSuffix, selectInstrument],
+  [selectSelectedKey, selectSelectedSuffix, selectInstrument, selectDataEpoch],
   (key, suffix, instrument) => getChord(key, suffix, instrument),
 );
 
 export const selectSelectedPositions = createSelector(
-  [selectSelectedKey, selectSelectedSuffix, selectInstrument],
+  [selectSelectedKey, selectSelectedSuffix, selectInstrument, selectDataEpoch],
   (key, suffix, instrument) => getChordPositions(key, suffix, instrument),
 );
 

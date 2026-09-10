@@ -4,11 +4,15 @@ import type { Instrument, Theme } from '../types';
 export interface UiState {
   theme: Theme;
   instrument: Instrument;
+  /** Bumped whenever a chord dataset finishes loading, so memoized selectors
+   *  that depend on lazily-loaded data recompute. */
+  dataEpoch: number;
 }
 
 const initialState: UiState = {
   theme: 'dark',
   instrument: 'guitar',
+  dataEpoch: 0,
 };
 
 const uiSlice = createSlice({
@@ -24,8 +28,11 @@ const uiSlice = createSlice({
     toggleTheme(state) {
       state.theme = state.theme === 'dark' ? 'light' : 'dark';
     },
+    bumpDataEpoch(state) {
+      state.dataEpoch += 1;
+    },
   },
 });
 
-export const { setInstrument, setTheme, toggleTheme } = uiSlice.actions;
+export const { setInstrument, setTheme, toggleTheme, bumpDataEpoch } = uiSlice.actions;
 export default uiSlice.reducer;

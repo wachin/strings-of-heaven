@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { loadChordDatabases } from '@shared/engine/chord_engine';
-import { selectInstrument, selectTheme, toggleTheme } from '@shared/store';
+import { bumpDataEpoch, selectInstrument, selectTheme, toggleTheme } from '@shared/store';
 import { useAppDispatch, useAppSelector } from './hooks';
 import { HomePage } from './pages/HomePage';
 import { ExplorePage } from './pages/ExplorePage';
@@ -25,7 +25,6 @@ export default function App() {
   const theme = useAppSelector(selectTheme);
   const instrument = useAppSelector(selectInstrument);
   const dispatch = useAppDispatch();
-  const [, forceDataUpdate] = useState(0);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -34,15 +33,12 @@ export default function App() {
   useEffect(() => {
     let active = true;
     loadChordDatabases(instrument).then(() => {
-      if (active) forceDataUpdate((epoch) => epoch + 1);
+      if (active) dispatch(bumpDataEpoch());
     });
     return () => {
       active = false;
     };
-    // dataEpoch is intentionally omitted: it only forces a re-render once the
-    // instrument's dataset has finished loading, it must not re-trigger the load.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [instrument]);
+  }, [instrument, dispatch]);
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">

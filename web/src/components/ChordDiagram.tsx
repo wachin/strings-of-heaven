@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { getChord } from '@shared/engine/chord_engine';
 import { chordDisplayName } from '@shared/engine/chord_engine';
-import { selectInstrument } from '@shared/store';
+import { selectDataEpoch, selectInstrument } from '@shared/store';
 import type { ProcessedChord } from '@shared/types';
 import { useAppSelector } from '../hooks';
 import { GuitarChordDiagram } from './GuitarChordDiagram';
@@ -21,9 +21,10 @@ interface ChordDiagramProps {
  */
 export function ChordDiagram({ chordKey, suffix, positionIndex = 0 }: ChordDiagramProps) {
   const instrument = useAppSelector(selectInstrument);
+  const dataEpoch = useAppSelector(selectDataEpoch);
   const chord: ProcessedChord | undefined = useMemo(
     () => getChord(chordKey, suffix, instrument),
-    [chordKey, suffix, instrument],
+    [chordKey, suffix, instrument, dataEpoch],
   );
 
   if (!chord || chord.positions.length === 0) {

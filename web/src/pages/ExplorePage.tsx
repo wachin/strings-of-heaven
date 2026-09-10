@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { getChordsForKey } from '@shared/engine/chord_engine';
 import {
   selectChordKey,
+  selectDataEpoch,
   selectInstrument,
   selectSelectedKey,
   selectSelectedSuffix,
@@ -19,9 +20,13 @@ export function ExplorePage() {
   const selectedKey = useAppSelector(selectSelectedKey);
   const selectedSuffix = useAppSelector(selectSelectedSuffix);
   const instrument = useAppSelector(selectInstrument);
+  const dataEpoch = useAppSelector(selectDataEpoch);
   const [query, setQuery] = useState('');
 
-  const chords = useMemo(() => getChordsForKey(selectedKey, instrument), [selectedKey, instrument]);
+  const chords = useMemo(
+    () => getChordsForKey(selectedKey, instrument),
+    [selectedKey, instrument, dataEpoch],
+  );
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return chords;

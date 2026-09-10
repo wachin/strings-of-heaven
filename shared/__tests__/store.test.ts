@@ -20,7 +20,7 @@ import {
   selectInstrument,
   selectTheme,
 } from '../store';
-import { toggleTheme } from '../store';
+import { toggleTheme, bumpDataEpoch } from '../store';
 import { setRoot, setScale } from '../store';
 import { setChordDatabases } from '../engine/chord_engine';
 import guitarChords from '../data/guitar_chords.json';
@@ -138,5 +138,27 @@ describe('ui slice', () => {
     expect(selectTheme(store.getState())).toBe('dark');
     store.dispatch(toggleTheme());
     expect(selectTheme(store.getState())).toBe('light');
+  });
+});
+
+describe('lazy data + selector memoization (regression)', () => {
+  it('recomputes chord selectors after data loads, even with unchanged key/instrument', () => {
+    setChordDatabases({ guitar: {} });
+    const store = createAppStore();
+    store.dispatch(selectChordKey('C'));
+
+    // Before data loads, the memoized selector caches an empty result.
+    expect(selectAllSuffixes(store.getState())).toEqual([]);
+    const cached = selectAllSuffixes(store.getState());
+    expect(cached).toBe(selectAllSuffixes(store.getState()));
+
+    // Data arrives and the epoch bumps (as App does on load).
+    setChordDatabases({ guitar: guitarChords as unknown as ChordDatabase });
+    store.dispatch(bumpDataEpoch());
+
+    const after = selectAllSuffixes(store.getState());
+    expect(after.length).toBeGreaterThan(0);
+    expect(after).not.toBe(cached);
+    expect(selectSelectedChord(store.getState())?.displayName).toBe('C major');
   });
 });
