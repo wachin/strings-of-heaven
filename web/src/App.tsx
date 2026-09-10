@@ -15,6 +15,7 @@ const NAV = [
   { to: '/', label: 'Home' },
   { to: '/explore', label: 'Explore' },
   { to: '/songs', label: 'Songs' },
+  { to: '/submit', label: 'Submit' },
   { to: '/scales', label: 'Scales' },
   { to: '/theory', label: 'Theory' },
 ];

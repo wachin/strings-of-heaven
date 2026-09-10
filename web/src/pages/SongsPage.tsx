@@ -5,7 +5,7 @@
  * Each row links to the song view (future) and has an Edit button.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { DIFFICULTY_LABELS, SONG_TYPE_LABELS } from '@shared/types/song';
 import { usePageTitle } from '../hooks/usePageTitle';
@@ -14,9 +14,14 @@ import { useSongStorage } from '../hooks/useSongStorage';
 export function SongsPage() {
   usePageTitle('My songs — Strings Of Heaven');
   const navigate = useNavigate();
-  const { songs, deleteSong } = useSongStorage();
+  const { songs, deleteSong, loadSongs, loading, error } = useSongStorage();
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+
+  // Load songs when component mounts
+  useEffect(() => {
+    loadSongs();
+  }, [loadSongs]);
 
   const filtered = songs.filter((s) => {
     const q = query.trim().toLowerCase();
@@ -39,7 +44,10 @@ export function SongsPage() {
         <div>
           <h1 className="text-2xl font-bold">My songs</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {songs.length} {songs.length === 1 ? 'song' : 'songs'} saved locally in this browser.
+            {loading 
+              ? 'Loading songs...' 
+              : `${songs.length} ${songs.length === 1 ? 'song' : 'songs'} saved locally in this browser.`
+            }
           </p>
         </div>
         <Link
@@ -50,8 +58,24 @@ export function SongsPage() {
         </Link>
       </div>
 
+      {/* Error state */}
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 p-4 dark:bg-red-900/20 dark:border-red-800">
+          <p className="text-sm text-red-600 dark:text-red-400">
+            Error loading songs: {error}
+          </p>
+        </div>
+      )}
+
+      {/* Loading state */}
+      {loading && (
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        </div>
+      )}
+
       {/* Search */}
-      {songs.length > 0 && (
+      {!loading && songs.length > 0 && (
         <input
           type="search"
           value={query}
@@ -63,7 +87,7 @@ export function SongsPage() {
       )}
 
       {/* Empty state */}
-      {songs.length === 0 && (
+      {!loading && !error && songs.length === 0 && (
         <div className="rounded-xl border border-dashed border-slate-300 p-10 text-center dark:border-slate-700">
           <p className="text-slate-500 dark:text-slate-400">No songs yet.</p>
           <Link
@@ -76,7 +100,7 @@ export function SongsPage() {
       )}
 
       {/* Song list */}
-      {filtered.length > 0 && (
+      {!loading && !error && filtered.length > 0 && (
         <ul className="space-y-3">
           {filtered.map((song) => (
             <li
@@ -166,7 +190,7 @@ export function SongsPage() {
         </ul>
       )}
 
-      {filtered.length === 0 && songs.length > 0 && (
+      {!loading && !error && filtered.length === 0 && songs.length > 0 && (
         <p className="text-sm text-slate-500 dark:text-slate-400">
           No songs match your search.
         </p>

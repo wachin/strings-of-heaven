@@ -137,20 +137,22 @@ export function SubmitSongPage() {
   usePageTitle(isEditing ? 'Edit song — Strings Of Heaven' : 'Submit a song — Strings Of Heaven');
 
   const navigate = useNavigate();
-  const { saveSong, getSongById } = useSongStorage();
+  const { saveSong, getSong, loading, error } = useSongStorage();
 
   const [form, setForm] = useState<SongEntry>(emptySongEntry);
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof SongEntry, string>>>({});
   const [showPreview, setShowPreview] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Load existing entry when editing
   useEffect(() => {
     if (editId) {
-      const entry = getSongById(editId);
-      if (entry) setForm(entry);
+      getSong(editId).then(entry => {
+        if (entry) setForm(entry);
+      });
     }
-  }, [editId, getSongById]);
+  }, [editId, getSong]);
 
   // ── Field helpers ──────────────────────────────────────────────────────────
 
@@ -175,14 +177,37 @@ export function SubmitSongPage() {
 
   // ── Submit ─────────────────────────────────────────────────────────────────
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!validate()) return;
-    const saved = saveSong(form);
-    setForm(saved);
-    setSaved(true);
-    // Navigate to the saved song's view after a short delay
-    setTimeout(() => navigate(`/songs/${saved.id}`), 900);
+    
+    setSaving(true);
+    try {
+      const songData = {
+        title: form.title,
+        artist: form.artist,
+        type: form.type,
+        capo: form.capo,
+        tuning: form.tuning,
+        key: form.key,
+        bpm: form.bpm,
+        timeSignature: form.timeSignature,
+        difficulty: form.difficulty,
+        description: form.description,
+        body: form.body,
+      };
+      
+      const savedId = await saveSong(songData);
+      setSaved(true);
+      
+      // Navigate to the songs list after a short delay
+      setTimeout(() => navigate('/songs'), 900);
+    } catch (err) {
+      console.error('Failed to save song:', err);
+      // Error is handled by the useSongStorage hook and shown in the UI
+    } finally {
+      setSaving(false);
+    }
   }
 
   // ── Layout ─────────────────────────────────────────────────────────────────
@@ -485,16 +510,27 @@ así clama mi alma por ti Señor.`}
           </Link>
 
           <div className="flex items-center gap-3">
-            {saved && (
+            {error && (
+              <span className="text-sm text-red-600 dark:text-red-400">
+                Error: {error}
+              </span>
+            )}
+            {saved && !error && (
               <span className="text-sm font-medium text-green-600 dark:text-green-400">
                 ✓ Saved!
               </span>
             )}
             <button
               type="submit"
+              disabled={saving || loading}
               className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 dark:focus:ring-offset-slate-950"
             >
-              {isEditing ? 'Save changes' : 'Save song'}
+              {saving || loading 
+                ? 'Saving...' 
+                : isEditing 
+                  ? 'Save changes' 
+                  : 'Save song'
+              }
             </button>
           </div>
         </div>
