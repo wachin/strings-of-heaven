@@ -74,3 +74,8 @@ DerivedData/
 __pycache__/
 *.py[cod]
 *.pyo
+
+# ---------
+# Personal
+# ---------
+8vo/
