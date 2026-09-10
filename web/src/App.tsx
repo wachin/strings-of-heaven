@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { loadChordDatabases } from '@shared/engine/chord_engine';
 import { bumpDataEpoch, selectInstrument, selectTheme, toggleTheme } from '@shared/store';
@@ -25,6 +25,7 @@ export default function App() {
   const theme = useAppSelector(selectTheme);
   const instrument = useAppSelector(selectInstrument);
   const dispatch = useAppDispatch();
+  const [loadingInstrument, setLoadingInstrument] = useState(true);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -32,8 +33,11 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
+    setLoadingInstrument(true);
     loadChordDatabases(instrument).then(() => {
-      if (active) dispatch(bumpDataEpoch());
+      if (!active) return;
+      dispatch(bumpDataEpoch());
+      setLoadingInstrument(false);
     });
     return () => {
       active = false;
@@ -42,6 +46,16 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <div
+        role="progressbar"
+        aria-label="Loading chord data"
+        aria-hidden={!loadingInstrument}
+        className={`pointer-events-none fixed inset-x-0 top-0 z-50 h-0.5 overflow-hidden bg-transparent transition-opacity duration-200 ${
+          loadingInstrument ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
+        <div className="h-full w-1/3 animate-[loading-bar_1.1s_ease-in-out_infinite] bg-indigo-500 dark:bg-indigo-400" />
+      </div>
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-3">
           <NavLink to="/" className="text-lg font-bold tracking-tight">
