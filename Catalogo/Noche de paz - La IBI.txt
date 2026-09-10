@@ -1,0 +1,66 @@
+Diagramas de Acordes 
+Cambio de Tono 
+Cifrado Inglés/Latino 
+Formato del Texto 
+Escala F# mayor
+
+[Intro]
+A D A E A D 
+
+
+A
+Noche de paz, noche de amor
+E           D      A
+Todo duerme alrededor
+ D                    A
+La virgen cuida al bebé que nació
+D                     A
+El santo niño, el enviado de Dios
+  E        C#m7      F#m7  B
+Duerme en paz celestial
+  A        E         A         
+Duerme en paz celestial
+
+A D
+
+F#
+Noche de paz, noche de amor
+C#                   B          F#
+Tiemblan pastores al ver la visión
+B                     F#
+Desde los cielos se anuncia a gran voz
+B                   F#
+[Coro s celestes dan gloria a Dios]
+C#         A#7        D#7  G#7
+Hoy nos nació un salvador
+F#         C#          F#
+Hoy nació Cristo el Señor
+
+F# - F# /F - B /A# - B
+
+F#
+Noche de paz, noche de amor
+C#                 B          F#
+Grande la estrella luz del Señor
+B                    F#
+Junto a los ángeles cantamos hoy
+B                 F#
+Dándole gloria al Rey nuestro Dios
+C#       A#7        D#7  G#7
+Cristo Jesús nos llegó
+F#        C#          D#7 - C# - G#7 - F# - A#7, D#7 - G#7 - F# - C#
+La salvación nos llegó
+
+
+F#
+Noche de paz, noche de amor
+C#               B         F#
+Dios el padre, a su hijo dio
+B                  F#
+Alba de gracia que nos anunció
+B             F#
+Amanecida la gran redención
+C#        A#7        D#7  G#7
+Cuando nació el salvador
+F#        C#        B - Bm - F#
+La noche que Él nació

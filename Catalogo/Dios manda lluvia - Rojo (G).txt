@@ -1,0 +1,46 @@
+Acordes 
+C9 = 032033
+G7 = 320001
+
+[Verso]
+G C9                 G    
+     Dios manda la lluvia 
+                 Em
+derrama de tu Espíritu 
+               C               Am 
+envía hoy tu fuego sana mis heridas 
+    D         G  C9
+restaurame Señor 
+
+  C9                 G    
+     Dios manda la lluvia 
+                 Em
+derrama de tu Espíritu 
+               C               Am 
+envía hoy tu fuego sana mis heridas 
+    D         G  G7
+restaurame Señor
+  
+
+[Coro]
+           C   D    
+Manda la lluvia 
+                 Bm  Em
+el rocío de tu amor 
+              Am  D  
+llenando las vidas 
+                   G  G7
+de la tierra oh Señor  
+
+           C   D    
+Manda la lluvia 
+                 Bm Em
+el rocío de tu amor 
+           Am D    
+Visita mi vida 
+            G
+cámbiame Señor 
+
+[Verso]
+
+[Coro]

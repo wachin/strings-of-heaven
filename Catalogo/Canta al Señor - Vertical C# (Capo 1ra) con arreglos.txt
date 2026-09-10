@@ -1,0 +1,93 @@
+﻿Canta al Señor (C#) Con arreglos
+Vertical 
+Poner el Capotraste en la 1ra 
+
+[Intro x3]
+Am  G  F 
+ 
+[Verso]
+C         G         Am       G    F 
+Mi Cristo, mi Rey, nadie es como tu 
+         C       F        G 
+Toda mi vida, quiero exaltar, 
+     Am         A#      G
+las maravillas de tu amor 
+
+C          G 
+Consuelo, refugio, 
+ Am        G         F 
+torre de fuerza y poder 
+         C    F      G 
+Todo mi ser, lo que soy, 
+ Am         A#    G 
+nunca cese de adorar 
+ 
+[Coro I]
+ C          Am       F         G
+Cante al Señor toda la creación 
+ C         Am        F            G
+Honra y poder, majestad sea al Rey 
+Am      G         F                
+Incomparables promesas me das  
+   Am  G  F  Am  G  F
+Señor
+
+
+[Verso]
+C   G Am G  F 
+C F G Am A# G  
+C   G Am G  F  
+C F G Am A# G  
+ 
+[Coro I y II]
+ C          Am       F          G
+Cante al Señor toda la creación 
+C         Am         F             G  
+Honra y poder, majestad sea al Rey 
+ Am        G        F 
+Montes caerán y el mar rugirá, 
+      G   Am    G 
+Al sonar de tu nombre 
+ C         Am        F            G 
+Canto con gozo al mirar tu poder 
+     C          Am    F        G 
+Por siempre yo te amaré y diré 
+Am    G           F              Am G F 
+Incomparables promesas me das Señor 
+                   Am  G  F 
+       son incomparables
+                   Am  G  F 
+       son incomparables
+         C    F      G 
+Todo mi ser, lo que soy, 
+ Am           A#  G  Am G F  Am G F
+nunca cese de adorar 
+
+[Coro I y II]
+ C          Am       F          G
+Cante al Señor toda la creación 
+ C         Am        F             G
+Honra y poder, majestad sea al Rey
+ Am        G        F 
+Montes caerán y el mar rugirá,
+ 
+ C          Am       F          G
+Cante al Señor toda la creación 
+ C         Am        F             G
+Honra y poder, majestad sea al Rey 
+ Am        G        F 
+Montes caerán y el mar rugirá, 
+      G   Am    G 
+Al sonar de tu nombre 
+ C         Am        F           G
+Canto con gozo al mirar tu poder 
+     C          Am    F        G
+Por siempre yo te amaré y diré 
+
+[Final n]
+C       F         G                
+Incomparables promesas me das 
+Am      G         F 
+Incomparables promesas me das
+Am      G         F 
+Incomparables promesas me das, etc
