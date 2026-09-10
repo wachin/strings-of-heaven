@@ -16,3 +16,6 @@
 [submodule "third-party/music-theory-data"]
 	path = third-party/music-theory-data
 	url = https://github.com/seancolsen/music-theory-data.git
+[submodule "third-party/chord-autoscroll"]
+	path = third-party/chord-autoscroll
+	url = https://github.com/wachin/chord-autoscroll
