@@ -333,47 +333,46 @@ This entire book can be downloaded free ...
 
 ---
 
-#### 7.1 Lógica de referencia: cómo funciona `chord_autoscroll.py`
+#### 7.1 Reference logic: how `chord_autoscroll.py` works
 
-El programa tiene dos responsabilidades centrales que fueron portadas a esta plataforma:
+The program has two core responsibilities that were ported to this platform:
 
-**A) Detectar si una línea es de acordes o de letra**
+**A) Detecting whether a line contains chords or lyrics**
 
-La lógica es la siguiente: si más del 50 % de las "palabras" de una línea
-coinciden con el patrón de un nombre de acorde, la línea se considera una
-línea de acordes. De lo contrario es letra normal.
+The logic is: if more than 50% of the "words" in a line match the pattern of
+a chord name, the line is treated as a chord line. Otherwise it is plain lyrics.
 
 ```python
 # third-party/chord-autoscroll/chord_autoscroll.py
-# Patrón que reconoce un token de acorde individual:
+# Pattern that recognises a single chord token:
 chord_pattern = r'\b[A-G](#|b)?(m|maj|min|dim|aug|sus|add)?[0-9]?(?!\w)'
 
 def is_chord_line(line):
     words = line.split()
     matches = [bool(re.fullmatch(chord_pattern, word)) for word in words]
-    # La línea es de acordes si MÁS DEL 50% de sus palabras son acordes
+    # The line is a chord line if MORE THAN 50% of its words are chords
     return sum(matches) > len(words) / 2
 ```
 
-Ejemplos de lo que considera línea de acordes:
+Examples classified as chord lines:
 ```
-"D  A  Em  G"          → True  (4 de 4 palabras son acordes)
-"      Em          G"  → True  (2 de 2 palabras son acordes)
-"D                 A"  → True  (2 de 2 palabras son acordes)
-```
-
-Ejemplos de lo que considera línea de letra:
-```
-"Hey dad look at me"   → False (0 de 5 palabras son acordes)
-"[Verse 1]"            → False (0 de 2 palabras son acordes)
-"Did I grow up..."     → False (0 de 4+ palabras son acordes)
+"D  A  Em  G"          → True  (4 out of 4 words are chords)
+"      Em          G"  → True  (2 out of 2 words are chords)
+"D                 A"  → True  (2 out of 2 words are chords)
 ```
 
-**B) Transponer los acordes preservando el espaciado**
+Examples classified as lyric lines:
+```
+"Hey dad look at me"   → False (0 out of 5 words are chords)
+"[Verse 1]"            → False (0 out of 2 words are chords)
+"Did I grow up..."     → False (0 out of 4+ words are chords)
+```
 
-La clave del diseño es que los acordes deben permanecer alineados encima de
-las sílabas correctas aunque el nombre transpuesto tenga distinta longitud
-(p.ej. `Bb` → `A`, un carácter menos).
+**B) Transposing chords while preserving whitespace alignment**
+
+The key design constraint is that chords must remain aligned above the correct
+syllables even when the transposed name has a different length
+(e.g. `Bb` → `A`, one character shorter).
 
 ```python
 # third-party/chord-autoscroll/chord_autoscroll.py
@@ -387,12 +386,12 @@ def transpose_chord(chord, spaces_after):
     root = chord[0]
     accidental = '#' if '#' in chord else 'b' if 'b' in chord else ''
     suffix = chord[len(root + accidental):]
-    # Busca el índice actual en chord_base
+    # Find the current index in chord_base
     current_index = next(
         i for i, group in enumerate(chord_base) if root + accidental in group
     )
     new_index = (current_index + semitones) % len(chord_base)
-    # Elige sostenido o bemol según la configuración
+    # Choose sharp or flat spelling based on user preference
     new_root = chord_base[new_index][0] if self.config.get('use_sharps', True) \
                else chord_base[new_index][-1]
     return new_root + suffix, ' ' * spaces_after
@@ -425,17 +424,16 @@ def transpose_text(self, text, semitones):
 
 ---
 
-#### 7.2 Cómo se implementó en Strings of Heaven
+#### 7.2 How it was implemented in Strings of Heaven
 
-Las funciones anteriores fueron traducidas a TypeScript y distribuidas en dos
-archivos:
+The functions above were translated to TypeScript and split across two files:
 
-**`shared/engine/music_theory.ts`** — lógica pura de teoría musical:
+**`shared/engine/music_theory.ts`** — pure music theory logic:
 
 ```typescript
 // shared/engine/music_theory.ts
 
-// Equivalente a chord_base en Python:
+// Equivalent to chord_base in Python:
 const CHROMATIC: readonly (readonly string[])[] = [
   ['C'],
   ['C#', 'Db'],
@@ -451,28 +449,28 @@ const CHROMATIC: readonly (readonly string[])[] = [
   ['B'],
 ] as const;
 
-// Equivalente a chord_pattern en Python, extendido para sufijos compuestos
-// y acordes de bajo (slash chords: G/B, Am/E):
+// Equivalent to chord_pattern in Python, extended to cover compound suffixes
+// and slash chords (G/B, Am/E):
 export const CHORD_TOKEN_REGEX =
   /\b([A-G][#b]?(?:maj|min|m|dim|aug|sus|add)?[0-9]?(?:b[0-9]|#[0-9])?(?:\/[A-G][#b]?)?)\b/g;
 
-// Equivalente a is_chord_line() en Python:
-// El umbral del 50% está en `words.length / 2` — ver sección 7.3
+// Equivalent to is_chord_line() in Python.
+// The 50% threshold lives in `words.length / 2` — see section 7.3
 export function isChordLine(line: string): boolean {
   const words = line.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return false;
   const chordCount = words.filter((w) => CHORD_TOKEN_SINGLE.test(w)).length;
-  return chordCount > words.length / 2;  // <-- umbral configurable (ver 7.3)
+  return chordCount > words.length / 2;  // <-- configurable threshold (see 7.3)
 }
 
-// Equivalente a transpose_chord() en Python:
+// Equivalent to transpose_chord() in Python:
 export function transposeChordName(
   chord: string,
   semitones: number,
   useSharps = true,
 ): string {
   if (semitones === 0) return chord;
-  // Manejo de slash chords: "G/B" → transpone ambas partes por separado
+  // Slash chords: "G/B" → transpose both parts independently
   const slashIdx = chord.indexOf('/');
   if (slashIdx !== -1) {
     const upper = transposeChordName(chord.slice(0, slashIdx), semitones, useSharps);
@@ -491,17 +489,17 @@ export function transposeChordName(
   return newRoot + suffix;
 }
 
-// Equivalente a process_line() en Python — preserva el espaciado
-// compensando la diferencia de longitud del nombre transpuesto:
+// Equivalent to process_line() in Python — preserves whitespace alignment
+// by compensating for length differences in the transposed chord name:
 export function transposeChordLine(
   line: string,
   semitones: number,
   useSharps = true,
 ): string {
-  // ... localiza tokens, transpone cada uno, ajusta espacios
+  // ... locates tokens, transposes each one, adjusts spacing
 }
 
-// Equivalente a transpose_text() en Python:
+// Equivalent to transpose_text() in Python:
 export function transposeSongBody(
   body: string,
   semitones: number,
@@ -515,13 +513,13 @@ export function transposeSongBody(
 }
 ```
 
-**`shared/engine/chord_engine.ts`** — helpers de alto nivel para canciones:
+**`shared/engine/chord_engine.ts`** — higher-level song helpers:
 
 ```typescript
 // shared/engine/chord_engine.ts
 
-// Extrae los acordes únicos de una canción en orden de aparición.
-// Usado para poblar el panel Guitar / Ukulele / Piano de la SongPage.
+// Returns the unique chord names found in a song body, in order of appearance.
+// Used to populate the Guitar / Ukulele / Piano panel on the SongPage.
 export function getUniqueChordsFromBody(body: string): string[] {
   const lines = parseSongBody(body);
   const seen = new Set<string>();
@@ -539,8 +537,8 @@ export function getUniqueChordsFromBody(body: string): string[] {
   return result;
 }
 
-// Resuelve cada nombre de acorde al par { note, suffix } que acepta
-// getChordPositions(), para obtener los diagramas del instrumento activo.
+// Resolves each chord name to the { note, suffix } pair accepted by
+// getChordPositions(), so the active instrument's diagrams can be fetched.
 export function resolveChordsFromBody(
   body: string,
   instrument: Instrument = 'guitar',
@@ -549,91 +547,91 @@ export function resolveChordsFromBody(
 
 ---
 
-#### 7.3 El umbral del 50 %: qué es y cómo ajustarlo
+#### 7.3 The 50% threshold: what it is and how to adjust it
 
-La función `isChordLine` usa un umbral que determina cuántas palabras de una
-línea deben ser acordes para que la línea entera se trate como línea de acordes.
-Actualmente está fijado en **más del 50 %** (`chordCount > words.length / 2`).
+`isChordLine` uses a threshold that decides how many words in a line must be
+chord tokens for the whole line to be treated as a chord line.
+The current value is **more than 50%** (`chordCount > words.length / 2`).
 
-Este valor **se puede cambiar libremente** en `shared/engine/music_theory.ts`:
+This value **can be freely changed** in `shared/engine/music_theory.ts`:
 
 ```typescript
-// shared/engine/music_theory.ts  — función isChordLine
+// shared/engine/music_theory.ts — isChordLine function
 export function isChordLine(line: string): boolean {
   const words = line.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return false;
   const chordCount = words.filter((w) => CHORD_TOKEN_SINGLE.test(w)).length;
 
-  // UMBRAL CONFIGURABLE:
-  // Cambia el denominador o el operador para ajustar la sensibilidad.
-  // Ejemplos:
-  //   words.length / 2     → más del 50 % (valor actual)
-  //   words.length / 3     → más del 33 %
-  //   words.length * 0.75  → más del 75 %
-  //   words.length         → el 100 % (todas las palabras deben ser acordes)
+  // CONFIGURABLE THRESHOLD:
+  // Change the divisor or operator to adjust sensitivity.
+  // Examples:
+  //   words.length / 2     → more than 50% (current value)
+  //   words.length / 3     → more than 33%
+  //   words.length * 0.75  → more than 75%
+  //   words.length         → 100% (every word must be a chord)
   return chordCount > words.length / 2;
 }
 ```
 
-**Qué pasa si se baja el umbral (más permisivo)**
+**What happens when the threshold is lowered (more permissive)**
 
-| Umbral | Efecto |
-|--------|--------|
-| > 33 % (`/ 3`) | La mayoría de líneas con al menos un acorde se detectarán como chord lines. Funciona bien cuando las canciones mezclan letra y acordes en la misma línea (formato inline). Puede causar falsos positivos: una línea de letra que contenga una palabra que casualmente parezca un acorde (p.ej. "A man named G" → detectaría "A" y "G" como acordes). Mínimo razonable: **25 %**. |
-| > 25 % (`/ 4`) | Extremadamente permisivo. Cualquier línea con una palabra parecida a un acorde se transpone. Solo útil si el formato de la canción mezcla acordes dentro de la prosa. Por debajo de este punto los falsos positivos son frecuentes y la transposición destruye el texto. |
+| Threshold | Effect |
+|-----------|--------|
+| > 33% (`/ 3`) | Most lines containing at least one chord will be detected as chord lines. Works well when songs mix lyrics and chords on the same line (inline format). May produce false positives: a lyric line containing a word that happens to look like a chord (e.g. "A man named G" — "A" and "G" would be detected as chords). Recommended minimum: **25%**. |
+| > 25% (`/ 4`) | Extremely permissive. Any line with a chord-like word gets transposed. Only useful if the song format mixes chords inside prose. Below this point false positives are frequent and transposition corrupts the lyrics. |
 
-**Qué pasa si se sube el umbral (más estricto)**
+**What happens when the threshold is raised (more strict)**
 
-| Umbral | Efecto |
-|--------|--------|
-| > 75 % (`* 0.75`) | Solo se detectan como chord lines las que tienen casi exclusivamente acordes. Ignora líneas con un solo acorde delante de texto breve, como `D  Hey dad`. Correcto para formatos muy limpios donde los acordes siempre van solos en su línea. |
-| > 100 % (`>= words.length`) | Solo se detectan líneas donde **todas** las palabras son acordes. Más preciso pero pierde las líneas con comentarios junto a los acordes, como `G  (strumming hard)`. |
+| Threshold | Effect |
+|-----------|--------|
+| > 75% (`* 0.75`) | Only lines consisting almost entirely of chords are detected. Misses lines with a single chord followed by brief text, such as `D  Hey dad`. Correct for very clean formats where chords always appear alone on their own line. |
+| >= 100% (`>= words.length`) | Only detects lines where **every** word is a chord. More precise, but misses lines that mix chords with annotations such as `G  (strumming hard)`. |
 
-**Recomendación:** el valor actual del 50 % es el equilibrio más robusto para
-el formato estándar de canciones con acordes (acordes en línea propia, letra
-debajo). No se recomienda bajar de 33 % ni subir de 75 % sin hacer pruebas
-exhaustivas con el catálogo completo.
+**Recommendation:** the current 50% value is the most robust balance for the
+standard song-with-chords format (chords on their own line, lyrics below).
+Going below 33% or above 75% is not recommended without thorough testing against
+the full song catalogue.
 
 ---
 
-#### 7.4 Segunda opción: detección y transposición basada en teoría musical
+#### 7.4 Alternative approach: detection and transposition based on music theory
 
-Como alternativa al enfoque de `chord_autoscroll.py` (regex + umbral estadístico),
-los repositorios de referencia del proyecto permiten implementar un enfoque
-completamente distinto basado en teoría musical formal. Este está disponible como
-opción para quien no quiera usar el umbral estadístico.
+As an alternative to the `chord_autoscroll.py` approach (regex + statistical
+threshold), the project's reference repositories make it possible to implement
+a completely different strategy based on formal music theory. This is available
+as an option for anyone who does not want to use the statistical threshold.
 
-**Fundamento:** `third-party/music-theory-data/EqualTemperament/12-Tone/Chords.yaml`
-define todos los tipos de acorde con sus bitmasks de 12 bits. Un acorde es
-cualquier token cuyas notas formen un conjunto de pitch classes reconocido.
+**Foundation:** `third-party/music-theory-data/EqualTemperament/12-Tone/Chords.yaml`
+defines all chord types with their 12-bit bitmasks. A chord is any token whose
+notes form a recognised set of pitch classes.
 
-**Cómo funcionaría:**
+**How it would work:**
 
-1. **Detección de token de acorde** — en vez de regex, se parsea el token a
-   `{ root, suffix }` y se verifica que el suffix exista en la base de datos
-   de acordes (`shared/data/guitar_chords.json` o `Chords.yaml`). Si existe,
-   es un acorde; si no, es texto.
+1. **Chord token detection** — instead of regex, each token is parsed into
+   `{ root, suffix }` and the suffix is validated against the chord database
+   (`shared/data/guitar_chords.json` or `Chords.yaml`). If found, it is a chord;
+   otherwise it is plain text.
 
-2. **Detección de línea de acordes** — en vez del umbral del 50 %, se itera
-   cada token de la línea separado por espacios y se verifica individualmente.
-   Si todos los tokens no vacíos son acordes válidos, la línea es de acordes.
-   Es un criterio binario (100 %), no estadístico.
+2. **Chord line detection** — instead of the 50% threshold, each
+   whitespace-separated token on the line is validated individually. If every
+   non-empty token is a valid chord, the line is a chord line. This is a binary
+   criterion (100%), not a statistical one.
 
-3. **Transposición** — en vez de mover índices en el array `CHROMATIC`, se usa
-   la clase `Note` y el método `transpose(intervalName)` que ya está implementado
-   en `shared/engine/music_theory.ts`. Por ejemplo, subir 2 semitonos es
-   `note.transpose('M2')`.
+3. **Transposition** — instead of shifting indices in the `CHROMATIC` array, the
+   existing `Note` class and its `transpose(intervalName)` method (already
+   implemented in `shared/engine/music_theory.ts`) are used. For example, raising
+   by 2 semitones is `note.transpose('M2')`.
 
-**Esquema de implementación:**
+**Implementation sketch:**
 
 ```typescript
-// OPCIÓN 2 — detección y transposición basada en teoría musical
-// (alternativa al enfoque chord_autoscroll)
+// OPTION 2 — detection and transposition based on music theory
+// (alternative to the chord_autoscroll approach)
 
 import { Note } from './music_theory';
 import { chordExists } from './chord_engine';
 
-// Un token es acorde si su root+suffix existen en la base de datos
+// A token is a chord if its root + suffix exist in the database
 function isChordToken(token: string): boolean {
   const m = /^([A-G][#b]?)(.*)$/.exec(token);
   if (!m) return false;
@@ -642,16 +640,16 @@ function isChordToken(token: string): boolean {
   return chordExists(note, suffix, 'guitar');
 }
 
-// Una línea es de acordes si TODOS sus tokens son acordes válidos en la BD
-// (criterio 100%, no estadístico)
+// A line is a chord line if ALL its tokens are valid chords in the database
+// (100% criterion, not statistical)
 function isChordLineStrict(line: string): boolean {
   const words = line.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return false;
   return words.every(isChordToken);
 }
 
-// Transposición usando el motor de intervalos de music_theory.ts
-// en vez del array CHROMATIC
+// Transposition using the interval engine from music_theory.ts
+// instead of the CHROMATIC array
 const SEMITONE_TO_INTERVAL: Record<number, string> = {
   1: 'm2', 2: 'M2', 3: 'm3', 4: 'M3', 5: 'P4',
   6: 'A4', 7: 'P5', 8: 'm6', 9: 'M6', 10: 'm7', 11: 'M7', 12: 'P8',
@@ -669,48 +667,48 @@ function transposeChordTheory(chord: string, semitones: number): string {
 }
 ```
 
-**Cuándo usar cada opción:**
+**When to use each option:**
 
-| | Opción 1 (actual — `chord_autoscroll`) | Opción 2 (teoría musical) |
+| | Option 1 (current — `chord_autoscroll`) | Option 2 (music theory) |
 |---|---|---|
-| **Detección** | Regex + umbral estadístico (50 %) | Validación en base de datos de acordes |
-| **Transposición** | Array CHROMATIC + índice | Clase `Note` + intervalos |
-| **Velocidad** | Muy rápida (sin acceso a BD) | Más lenta (consulta la BD) |
-| **Precisión** | Alta para formatos estándar | Perfecta, pero requiere BD cargada |
-| **Funciona offline/sin BD** | Sí | No (necesita los JSON cargados) |
-| **Falsos positivos** | Posibles con texto que contiene letras A–G | Ninguno |
-| **Recomendado para** | Archivos de texto plano, editor ligero | Validación estricta, interfaz web |
+| **Detection** | Regex + statistical threshold (50%) | Validation against chord database |
+| **Transposition** | CHROMATIC array + index shift | `Note` class + intervals |
+| **Speed** | Very fast (no database access) | Slower (queries the JSON database) |
+| **Accuracy** | High for standard formats | Perfect, but requires the database to be loaded |
+| **Works offline / without DB** | Yes | No (requires the JSON files to be loaded) |
+| **False positives** | Possible with text containing letters A–G | None |
+| **Recommended for** | Plain text files, lightweight editor | Strict validation, web interface |
 
-Los recursos de referencia para implementar la opción 2 completa están en:
-- `third-party/musthe/musthe/musthe.py` — `Note`, `Interval`, transposición
-- `third-party/music-theory-data/EqualTemperament/12-Tone/Chords.yaml` — tipos de acorde
-- `shared/engine/music_theory.ts` — clase `Note` y `getInterval` ya implementados
+Reference resources for a full implementation of Option 2:
+- `third-party/musthe/musthe/musthe.py` — `Note`, `Interval`, transposition
+- `third-party/music-theory-data/EqualTemperament/12-Tone/Chords.yaml` — chord types
+- `shared/engine/music_theory.ts` — `Note` class and `getInterval` already implemented
 
 ---
 
-#### 7.5 Tabla completa de equivalencias Python → TypeScript
+#### 7.5 Full Python → TypeScript equivalence table
 
-| Python (`chord_autoscroll.py`) | TypeScript (`strings-of-heaven`) | Archivo |
+| Python (`chord_autoscroll.py`) | TypeScript (`strings-of-heaven`) | File |
 |---|---|---|
-| `chord_base` (lista de 12 grupos) | `CHROMATIC` | `shared/engine/music_theory.ts` |
+| `chord_base` (list of 12 groups) | `CHROMATIC` | `shared/engine/music_theory.ts` |
 | `chord_pattern` (regex) | `CHORD_TOKEN_REGEX` | `shared/engine/music_theory.ts` |
 | `is_chord_line(line)` | `isChordLine(line)` | `shared/engine/music_theory.ts` |
 | `transpose_chord(chord, spaces)` | `transposeChordName(chord, n, useSharps)` | `shared/engine/music_theory.ts` |
 | `process_line(line)` | `transposeChordLine(line, n, useSharps)` | `shared/engine/music_theory.ts` |
 | `transpose_text(text, semitones)` | `transposeSongBody(body, n, useSharps)` | `shared/engine/music_theory.ts` |
-| _(no existía)_ | `parseSongBody(body)` | `shared/engine/music_theory.ts` |
-| _(no existía)_ | `parseSongFile(source)` | `shared/engine/music_theory.ts` |
-| _(no existía)_ | `getUniqueChordsFromBody(body)` | `shared/engine/chord_engine.ts` |
-| _(no existía)_ | `resolveChordsFromBody(body, instrument)` | `shared/engine/chord_engine.ts` |
+| _(did not exist)_ | `parseSongBody(body)` | `shared/engine/music_theory.ts` |
+| _(did not exist)_ | `parseSongFile(source)` | `shared/engine/music_theory.ts` |
+| _(did not exist)_ | `getUniqueChordsFromBody(body)` | `shared/engine/chord_engine.ts` |
+| _(did not exist)_ | `resolveChordsFromBody(body, instrument)` | `shared/engine/chord_engine.ts` |
 
-**Diferencias respecto al original:**
-- `CHORD_TOKEN_REGEX` cubre sufijos compuestos (`m7b5`, `maj13`, `sus2`, `sus4`,
-  `add9`, `7#9`) y slash chords (`G/B`, `Am/E`) que el original no contemplaba.
-- `transposeChordLine` compensa la diferencia de longitud cuando el nombre
-  transpuesto es más corto o más largo, manteniendo la alineación con la letra.
-- `parseSongBody` y `parseSongFile` son funciones nuevas que el programa de
-  escritorio original no necesitaba (trabajaba con archivos `.txt` sin marcadores
-  de sección `~~~`).
+**Differences from the original:**
+- `CHORD_TOKEN_REGEX` covers compound suffixes (`m7b5`, `maj13`, `sus2`, `sus4`,
+  `add9`, `7#9`) and slash chords (`G/B`, `Am/E`) that the original did not handle.
+- `transposeChordLine` compensates for length changes when the transposed chord
+  name is shorter or longer, keeping alignment with the lyric line below.
+- `parseSongBody` and `parseSongFile` are new functions the original desktop
+  program did not need (it worked with plain `.txt` files, without `~~~` section
+  markers).
 
 **License note**
 
