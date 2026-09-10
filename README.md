@@ -375,7 +375,7 @@ npx tsc --noEmit                 # repo root (shared)
 cd web && npx tsc --noEmit       # web app
 
 # Tests
-npx jest                         # root: engine, store, diagrams (72 tests)
+npx jest                         # root: engine, store, diagrams (75 tests)
 cd web && npx vitest run         # web: component tests (8 tests)
 cd web && npx vitest             # web: watch mode
 
@@ -475,7 +475,13 @@ Contributions are welcome. Before opening a pull request:
 
 ## License
 
-MIT — see [LICENSE](./LICENSE) for details.
+This project is licensed under the **GNU General Public License v3.0** — see
+[LICENSE](./LICENSE) for the full text.
 
-Chord data from [`tombatossals/chords-db`](https://github.com/tombatossals/chords-db) is MIT licensed.
-Music theory data from [`seancolsen/music-theory-data`](https://github.com/seancolsen/music-theory-data) is MIT licensed.
+Chord data from [`tombatossals/chords-db`](https://github.com/tombatossals/chords-db)
+is MIT licensed. Music theory reference from
+[`seancolsen/music-theory-data`](https://github.com/seancolsen/music-theory-data)
+is CC BY-SA 4.0 licensed. `gmoe/piano_fundamentals` is © 2009 Chuan C. Chang
+(copy permitted with attribution). Each third-party submodule retains its own
+license; see [Third-party attributions & references](#third-party-attributions--references)
+for details.
