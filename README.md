@@ -116,6 +116,213 @@ To regenerate the datasets after a `chords-db` update, run `scripts/process_chor
 
 ---
 
+## Third-party attributions & references
+
+Strings Of Heaven stands on the shoulders of several open-source music projects.
+This section gives **proper credit** to each one, lists the **exact files that
+were consulted**, shows a **small excerpt** of their content, and explains **how
+each was adapted** into this codebase. Every submodule lives under
+`third-party/` (see `git submodule status`).
+
+### License summary
+
+| Repository | Author(s) | License | How it is used here |
+|---|---|---|---|
+| [`tombatossals/chords-db`](https://github.com/tombatossals/chords-db) | David Rubert | **MIT** | Primary chord datasets (guitar / piano / ukulele) — bundled data |
+| [`szaza/guitar-chords-db-json`](https://github.com/szaza/guitar-chords-db-json) | Zoltán Szabó | **MIT** | Fallback hex fret-string format reference |
+| [`seancolsen/music-theory-data`](https://github.com/seancolsen/music-theory-data) | Sean Colsen | **CC BY-SA 4.0** | Theory reference only (chord/scale/interval definitions) — *not* redistributed as data |
+| [`gciruelos/musthe`](https://github.com/gciruelos/musthe) | Gonzalo Ciruelos | **MIT** | Algorithm reference for `music_theory.ts` |
+| [`openmusictheory`](https://github.com/openmusictheory/openmusictheory.github.io) | Kris Shaffer, Bryn Hughes, Brian Jarvis, Robin Wharton et al. | **CC BY-SA** (Creative Commons) | Educational content reference for the Theory page |
+| [`gmoe/piano_fundamentals`](https://github.com/gmoe/piano_fundamentals) | Chuan C. Chang | **Custom permission** (© 2009 — "Copy permitted if author's name, Chuan C. Chang, and this copyright statement are included") | Conceptual piano reference |
+
+> **Note on CC BY-SA:** `music-theory-data` and `openmusictheory` are used
+> **only as conceptual/algorithmic references** to inform our own TypeScript
+> implementations. We do **not** copy or redistribute their data files; the
+> chord data shipped in `shared/data/` originates from `chords-db` (MIT). Credit
+> is given here in the spirit of attribution regardless.
+
+---
+
+### 1. `tombatossals/chords-db` — MIT — David Rubert
+
+**Files consulted**
+- `third-party/chords-db/lib/guitar.json` — raw guitar dataset
+- `third-party/chords-db/lib/piano.json` — raw piano dataset
+- `third-party/chords-db/lib/ukulele.json` — raw ukulele dataset
+- `third-party/chords-db/lib/instruments.json` — instrument/tuning metadata
+- `third-party/chords-db/src/db/` — TypeScript schema used to generate the JSON
+- `third-party/chords-db/readme.md` — format documentation
+
+**Excerpt** (`third-party/chords-db/lib/guitar.json`, schema):
+```json
+{"main":{"strings":6,"fretsOnChord":4,"name":"guitar"},
+ "tunings":{"standard":["E2","A2","D3","G3","B3","E4"]},
+ "keys":["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"],
+ "suffixes":["major","minor","dim","dim7","sus","7","maj7","m7", ...],
+ "chords":{ "C":{ "major":{ "positions":[
+   {"frets":[-1,3,2,0,1,0],"fingers":[0,3,2,0,1,0],"baseFret":1,"barres":[],"midi":[48,52,55,60,64]},
+   {"frets":[-1,1,3,3,3,1],"fingers":[0,1,2,3,4,1],"barres":[1],"capo":true,"baseFret":3,"midi":[48,55,60,64,67]}
+ ] } } }
+```
+
+**How it was adapted**
+- `scripts/process_chords.js` reads these three JSON files and writes the flat,
+  app-ready `shared/data/{guitar,piano,ukulele}_chords.json` consumed by
+  `shared/engine/chord_engine.ts`.
+- The position shape (`frets` / `fingers` / `baseFret` / `barres` / `midi`) maps
+  directly onto the `ChordPosition` type in `shared/types.ts`.
+- Keys are normalized (e.g. `"Csharp"` → `"C#"`) and enharmonic fallback
+  (`C#` ↔ `Db`, `F#` ↔ `Gb`) is applied — see `resolveKey()` in
+  `shared/engine/chord_engine.ts`. (The ukulele set omits `C#`/`F#`; it uses
+  `Db`/`Gb`.)
+- This is the **only** submodule whose data is redistributed in the app.
+
+---
+
+### 2. `szaza/guitar-chords-db-json` — MIT — Zoltán Szabó
+
+**Files consulted**
+- `third-party/guitar-chords-db-json/<RootNote>/<chord>.json` (e.g. `C/major.json`,
+  `D/9_c.json`) — ~99k guitar chord variants encoded as hex fret strings.
+
+**Excerpt** (`third-party/guitar-chords-db-json/C/major.json`):
+```json
+{ "key": "C", "suffix": "major",
+  "positions": [
+    { "frets": "x32010", "fingers": "032010" },
+    { "frets": "x35553", "fingers": "012341", "barres": "3", "capo": "true" },
+    { "frets": "8aa988", "fingers": "134211", "barres": "8", "capo": "true" }
+  ]
+}
+```
+
+**How it was adapted**
+- This hex-string convention (`x` = muted, digits 0-9 = fret, letters `a`–`c` =
+  frets 10-12) informed `parseFretString()` in `shared/engine/chord_engine.ts`,
+  kept as a **fallback decoder** for rare guitar voicings not present in
+  `chords-db`. It is not the primary data source.
+
+---
+
+### 3. `seancolsen/music-theory-data` — CC BY-SA 4.0 — Sean Colsen
+
+**Files consulted**
+- `third-party/music-theory-data/EqualTemperament/12-Tone/Chords.yaml`
+- `third-party/music-theory-data/EqualTemperament/12-Tone/Scales.yaml`
+- `third-party/music-theory-data/EqualTemperament/12-Tone/Intervals.yaml`
+- `third-party/music-theory-data/EqualTemperament/12-Tone/Notes.yaml`
+
+**Excerpt** (`.../Chords.yaml`):
+```yaml
+- binary: 137
+  names: [Minor]
+  abbreviations: [min]
+  symbols: [m, '−']
+- binary: 145
+  names: [Major]
+  abbreviations: [maj]
+```
+(`.../Intervals.yaml`):
+```yaml
+- id: 0  abbreviation: "1"  names: [Tonal Center, Unison, Tonic]
+- id: 1  abbreviation: "♭2" names: [Minor Second, Half Step]
+- id: 2  abbreviation: "2"  names: [Major Second, Whole Step]
+```
+
+**How it was adapted**
+- The binary bitmask definitions were the basis for the canonical chord-type
+  list and scale formulas in `shared/constants/theory.ts`:
+  - `CHORD_FORMULAS` (a chord type → array of semitone intervals),
+  - `SCALES` (scale id → semitone intervals),
+  - `INTERVALS` (id → name / abbreviation),
+  - `SUFFIX_TO_CANONICAL`, `CANONICAL_TO_SUFFIX`, `CHORD_TYPE_INFO` — the
+    mapping between `chords-db` suffixes (e.g. `m7`) and canonical theory types
+    (e.g. `min7`).
+- Used as a **reference only**; no YAML is shipped in the app.
+
+---
+
+### 4. `gciruelos/musthe` — MIT — Gonzalo Ciruelos
+
+**Files consulted**
+- `third-party/musthe/musthe/musthe.py` — the `Note`, `Interval`, `Chord` and
+  `Scale` classes.
+- `third-party/musthe/examples/harmonize_list.py`, `harmonize_dict.py` — usage examples.
+
+**Excerpt** (`.../musthe/musthe.py`, the `Note` parser and `Scale.harmonize`):
+```python
+class Note:
+    """The note class. ..."""
+    pattern = re.compile(r'([A-G])(b{0,3}|#{0,3})(\d{0,1})$')
+    # accidental_value('#') -> 1, 'b' -> -1
+
+def harmonize(self, include_dom7=True):
+    """Find chords matching each Note in the scale ..."""
+    chords = [None for _ in range(len(self.notes))]
+    for i, note in enumerate(self.notes):
+        for ch in Chord.all(root=Note(str(note))):
+            search_notes = [str(sn) for sn in self.notes]
+            if include_dom7:
+                search_notes.append(str(note + Interval('m7')))
+            if set(str(n) for n in ch.notes) <= set(search_notes):
+                chords_for_note.append(ch)
+```
+
+**How it was adapted**
+- `musthe.py` was the **algorithm reference** for `shared/engine/music_theory.ts`,
+  reimplemented in pure TypeScript (no Python dependency, fully portable to web
+  and React Native):
+  - note name parsing / accidental values → `Note` helpers and `pitchClassOf`,
+  - `note + Interval(...)` → `getInterval` / semitone math,
+  - `Scale.harmonize` (stack thirds over each scale degree, optionally adding the
+    dominant 7th) → `harmonizeScale(root, scale)`,
+  - `buildScale` from a scale's interval formula.
+- The code was rewritten from scratch in TS; no Python was copied.
+
+---
+
+### 5. `openmusictheory` — CC BY-SA — Shaffer, Hughes, Jarvis, Wharton et al.
+
+**Files consulted** (educational reference for the Theory page prose)
+- `third-party/openmusictheory/intervals.md` — chromatic vs. diatonic intervals
+- `third-party/openmusictheory/scales.md`, `scales2.md` — scales & modes
+- `third-party/openmusictheory/appliedChords.md` — chord construction
+- `third-party/openmusictheory/about.md` — license / "open-source textbook" statement
+
+**Excerpt** (`.../intervals.md`):
+> An *interval* is the distance between two pitches, usually measured as a number
+> of steps on a scale. ... The simplest way to measure intervals ... is to count
+> the number of half-steps, or *semitones*, between two pitches.
+
+**How it was adapted**
+- Informed the **structure and wording** of `web/src/pages/TheoryPage.tsx`
+  (Intervals, Chord formulas, Scales and modes, Harmonizing a scale).
+- No code or data was copied — purely conceptual/editorial reference.
+
+---
+
+### 6. `gmoe/piano_fundamentals` — Custom permission — Chuan C. Chang
+
+**Files consulted**
+- `third-party/piano_fundamentals/source/about.rst` — copyright notice
+- `third-party/piano_fundamentals/source/chapter1/...` — piano technique/reference
+- `third-party/piano_fundamentals/README.md`
+
+**Excerpt** (`.../source/about.rst`):
+```
+Copyright © 2009. Copy permitted if author’s name, Chuan C. Chang, and this
+copyright statement are included.  Order this book at BookSurge or Amazon.
+This entire book can be downloaded free ...
+```
+
+**How it was adapted**
+- Served as a **conceptual reference** for the piano chord-diagram feature and
+  the piano-related content on the Theory page.
+- No code or data was copied. Credit is given here per the author's stated
+  permission terms (name + copyright statement included).
+
+---
+
 ## Getting started
 
 ### Prerequisites
