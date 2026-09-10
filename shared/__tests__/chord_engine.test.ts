@@ -155,3 +155,18 @@ describe('display helpers', () => {
     expect(ALL_KEYS[11]).toBe('B');
   });
 });
+
+describe('resolveKey / enharmonic fallback', () => {
+  it('falls back to the flat spelling when the sharp key is missing (ukulele)', () => {
+    // Ukulele data spells these with flats, not sharps.
+    expect(getChordsForKey('C#', 'ukulele').length).toBeGreaterThan(0);
+    expect(getChordsForKey('F#', 'ukulele').length).toBeGreaterThan(0);
+    const chord = getChord('C#', 'major', 'ukulele');
+    expect(chord).toBeDefined();
+    expect(chord?.positions.length).toBeGreaterThan(0);
+  });
+
+  it('keeps the sharp spelling when both are present (guitar)', () => {
+    expect(getChordsForKey('C#', 'guitar').length).toBeGreaterThan(0);
+  });
+});

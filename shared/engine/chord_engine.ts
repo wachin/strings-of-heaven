@@ -69,13 +69,37 @@ export function normalizeKey(note: string): string {
   return map[trimmed] ?? trimmed;
 }
 
+// Enharmonic pairs. Some datasets spell a key with flats (e.g. ukulele uses
+// "Db"/"Gb" instead of "C#"/"F#"); resolving to the available spelling lets a
+// selected "C#" still return chords for "Db".
+const ENHARMONIC: Record<string, string> = {
+  'C#': 'Db', Db: 'C#',
+  'D#': 'Eb', Eb: 'D#',
+  'F#': 'Gb', Gb: 'F#',
+  'G#': 'Ab', Ab: 'G#',
+  'A#': 'Bb', Bb: 'A#',
+};
+
+/**
+ * Resolve a root note to a key that actually exists in the instrument's
+ * database, falling back to its enharmonic spelling when needed.
+ */
+export function resolveKey(note: string, instrument: Instrument): string {
+  const key = normalizeKey(note);
+  const db = databaseFor(instrument);
+  if (db[key]) return key;
+  const alt = ENHARMONIC[key];
+  if (alt && db[alt]) return alt;
+  return key;
+}
+
 // ---------------------------------------------------------------------------
 // Lookups
 // ---------------------------------------------------------------------------
 
 /** All chords available for a root note on the given instrument. */
 export function getChordsForKey(note: string, instrument: Instrument = 'guitar'): ProcessedChord[] {
-  return databaseFor(instrument)[normalizeKey(note)] ?? [];
+  return databaseFor(instrument)[resolveKey(note, instrument)] ?? [];
 }
 
 /** Diagram positions for a specific chord; empty array if not found. */
@@ -84,7 +108,7 @@ export function getChordPositions(
   suffix: string,
   instrument: Instrument = 'guitar',
 ): ChordPosition[] {
-  const chord = databaseFor(instrument)[normalizeKey(note)]?.find((c) => c.suffix === suffix);
+  const chord = databaseFor(instrument)[resolveKey(note, instrument)]?.find((c) => c.suffix === suffix);
   return chord ? chord.positions : [];
 }
 
@@ -94,7 +118,7 @@ export function getChord(
   suffix: string,
   instrument: Instrument = 'guitar',
 ): ProcessedChord | undefined {
-  return databaseFor(instrument)[normalizeKey(note)]?.find((c) => c.suffix === suffix);
+  return databaseFor(instrument)[resolveKey(note, instrument)]?.find((c) => c.suffix === suffix);
 }
 
 /** All distinct suffixes available for a root note on the given instrument. */
