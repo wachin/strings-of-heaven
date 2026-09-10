@@ -134,6 +134,7 @@ each was adapted** into this codebase. Every submodule lives under
 | [`gciruelos/musthe`](https://github.com/gciruelos/musthe) | Gonzalo Ciruelos | **MIT** | Algorithm reference for `music_theory.ts` |
 | [`openmusictheory`](https://github.com/openmusictheory/openmusictheory.github.io) | Kris Shaffer, Bryn Hughes, Brian Jarvis, Robin Wharton et al. | **CC BY-SA** (Creative Commons) | Educational content reference for the Theory page |
 | [`gmoe/piano_fundamentals`](https://github.com/gmoe/piano_fundamentals) | Chuan C. Chang | **Custom permission** (© 2009 — "Copy permitted if author's name, Chuan C. Chang, and this copyright statement are included") | Conceptual piano reference |
+| [`wachin/chord-autoscroll`](https://github.com/wachin/py_chord_autoscroll) | Washington Indacochea Delgado | **GPL 3** | Algorithm reference for chord-line detection, body parser, and transposition engine in `music_theory.ts` |
 
 > **Note on CC BY-SA:** `music-theory-data` and `openmusictheory` are used
 > **only as conceptual/algorithmic references** to inform our own TypeScript
@@ -323,6 +324,79 @@ This entire book can be downloaded free ...
 
 ---
 
+### 7. `wachin/chord-autoscroll` — GPL 3 — Washington Indacochea Delgado
+
+**Repository:** [`https://github.com/wachin/py_chord_autoscroll`](https://github.com/wachin/py_chord_autoscroll)
+
+**Files consulted**
+- `third-party/chord-autoscroll/chord_autoscroll.py` — full source of the PyQt6 desktop app
+
+**Excerpt** (`chord_autoscroll.py` — the core transposition logic):
+```python
+def transpose_text(self, text, semitones):
+    chord_pattern = r'\b[A-G](#|b)?(m|maj|min|dim|aug|sus|add)?[0-9]?(?!\w)'
+    chord_base = [
+        ['C'], ['C#', 'Db'], ['D'], ['D#', 'Eb'], ['E'], ['F'],
+        ['F#', 'Gb'], ['G'], ['G#', 'Ab'], ['A'], ['A#', 'Bb'], ['B']
+    ]
+
+    def is_chord_line(line):
+        words = line.split()
+        matches = [bool(re.fullmatch(chord_pattern, word)) for word in words]
+        return sum(matches) > len(words) / 2
+
+    def process_line(line):
+        # transposes each chord token preserving whitespace alignment
+        ...
+```
+
+**What was adapted and how**
+
+The following algorithms were translated from Python to TypeScript and integrated
+into `shared/engine/music_theory.ts`:
+
+| Python function / data | TypeScript equivalent | Where |
+|---|---|---|
+| `chord_base` list | `CHROMATIC` constant | `music_theory.ts` |
+| `chord_pattern` regex | `CHORD_TOKEN_REGEX` | `music_theory.ts` |
+| `is_chord_line(line)` | `isChordLine(line)` | `music_theory.ts` |
+| `transpose_chord(chord, spaces)` | `transposeChordName(chord, semitones, useSharps)` | `music_theory.ts` |
+| `process_line(line)` | `transposeChordLine(line, semitones, useSharps)` | `music_theory.ts` |
+| `transpose_text(text, semitones)` | `transposeSongBody(body, semitones, useSharps)` | `music_theory.ts` |
+
+Additionally, `chord_engine.ts` exposes two higher-level helpers built on top of
+the above:
+
+- `getUniqueChordsFromBody(body)` — returns the ordered list of unique chord names
+  found in a song body; used to populate the Guitar / Ukulele / Piano widget.
+- `resolveChordsFromBody(body, instrument)` — resolves each chord name to a
+  `{ note, suffix }` pair compatible with `getChordPositions`.
+
+And `music_theory.ts` also adds:
+
+- `parseSongBody(body)` — parses the body into typed lines (`chord` / `lyric` /
+  `blank` / `header`) with per-token column positions for precise rendering.
+- `parseSongFile(source)` — splits the three `~~~` sections (meta, capo, body)
+  of the song file format into a `SongFileSections` object.
+
+**Differences from the original**
+- Extended `CHORD_TOKEN_REGEX` to handle compound suffixes (`m7b5`, `maj13`,
+  `sus2`, `sus4`, `add9`, `7#9`) and slash chords (`G/B`, `Am/E`).
+- `transposeChordLine` compensates for length changes when transposed chord names
+  differ in length (e.g. `Bb` → `A`), keeping the alignment with the lyric line below.
+- The body parser adds `parseSongBody` and `parseSongFile` which go beyond what
+  the original Python program needed (it worked with plain text files, no section
+  markers).
+
+**License note**
+
+`chord_autoscroll.py` is released under the **GNU General Public License v3.0**.
+The algorithms were translated to TypeScript and adapted into this project, which
+is also licensed under GPL 3. No Python code was copied verbatim; the logic was
+reimplemented in TypeScript.
+
+---
+
 ## Getting started
 
 ### Prerequisites
@@ -405,6 +479,9 @@ git submodule add https://github.com/gciruelos/musthe.git third-party/musthe
 git submodule add https://github.com/openmusictheory/openmusictheory.github.io.git third-party/openmusictheory
 git submodule add https://github.com/gmoe/piano_fundamentals.git third-party/piano_fundamentals
 git submodule add https://github.com/seancolsen/music-theory-data.git third-party/music-theory-data
+
+# Song body parser and transposition reference (GPL 3)
+git submodule add https://github.com/wachin/py_chord_autoscroll.git third-party/chord-autoscroll
 
 git submodule update --init --recursive
 ```

@@ -14,6 +14,9 @@ import {
   CANONICAL_TO_SUFFIX,
   SUFFIX_EQUIVALENTS,
 } from '../constants/theory';
+import {
+  parseSongBody,
+} from './music_theory';
 
 export { ALL_KEYS };
 
@@ -186,4 +189,134 @@ export function chordDisplayName(note: string, suffix: string): string {
 /** Suffix used by chords-db for a canonical engine type. */
 export function suffixForCanonicalType(canonicalType: string): string | undefined {
   return CANONICAL_TO_SUFFIX[canonicalType];
+}
+
+// ---------------------------------------------------------------------------
+// Song-body chord extraction
+// Uses the parser from music_theory.ts (ported from chord_autoscroll.py GPL 3)
+// ---------------------------------------------------------------------------
+
+export {
+  isChordLine,
+  parseSongBody,
+  parseSongFile,
+  transposeSongBody,
+  transposeChordName,
+  transposeChordLine,
+  CHORD_TOKEN_REGEX,
+  type ParsedSongLine,
+  type SongLineToken,
+  type SongLineType,
+  type SongFileSections,
+} from './music_theory';
+
+/**
+ * Extract every unique chord name that appears in a song body.
+ *
+ * The returned array preserves first-appearance order and contains the chords
+ * exactly as written in the source (e.g. "Em", "G", "D", "A").  Use this list
+ * to populate the Chords panel (Guitar / Ukulele / Piano widget) for a song.
+ *
+ * @param body  Raw text of the ~~~body section (lyrics + chord lines).
+ *
+ * Example:
+ *   getUniqueChordsFromBody("D\n Hey dad\nA\n Think back\n      Em         G\nDid I grow")
+ *   // → ["D", "A", "Em", "G"]
+ */
+export function getUniqueChordsFromBody(body: string): string[] {
+  const lines = parseSongBody(body);
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const line of lines) {
+    if (line.type === 'chord') {
+      for (const token of line.tokens) {
+        if (!seen.has(token.chord)) {
+          seen.add(token.chord);
+          result.push(token.chord);
+        }
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Same as `getUniqueChordsFromBody` but also resolves each chord name to a
+ * `{ note, suffix }` pair that can be fed directly into `getChordPositions`.
+ *
+ * Slash-chord bass notes are ignored (only the upper chord is resolved).
+ *
+ * @param body       Raw body text.
+ * @param instrument Target instrument — used to validate suffix availability.
+ *
+ * Example:
+ *   resolveChordsFromBody("D\nHey dad\nEm  G", "guitar")
+ *   // → [{ raw: "D",  note: "D",  suffix: "major" },
+ *   //    { raw: "Em", note: "E",  suffix: "minor" },
+ *   //    { raw: "G",  note: "G",  suffix: "major" }]
+ */
+export interface ResolvedChord {
+  /** Chord token as written in the body, e.g. "Em", "G/B", "F#m7". */
+  raw: string;
+  /** Root note, e.g. "E", "G", "F#". */
+  note: string;
+  /** chords-db suffix, e.g. "minor", "major", "m7". */
+  suffix: string;
+}
+
+/**
+ * Maps common chord shorthand suffixes (as they appear in song files) to the
+ * spelling used by chords-db.  Anything not listed falls back to
+ * `findEquivalentSuffix`.
+ */
+const SHORTHAND_TO_SUFFIX: Record<string, string> = {
+  '':      'major',
+  'm':     'minor',
+  'maj7':  'maj7',
+  'm7':    'm7',
+  '7':     '7',
+  'dim':   'dim',
+  'dim7':  'dim7',
+  'aug':   'aug',
+  'sus2':  'sus2',
+  'sus4':  'sus4',
+  'add9':  'add9',
+  'm9':    'm9',
+  'maj9':  'maj9',
+  '9':     '9',
+  '11':    '11',
+  '13':    '13',
+  '6':     '6',
+  'm6':    'm6',
+  '5':     '5',
+  'm7b5':  'm7b5',
+  'aug7':  'aug7',
+};
+
+export function resolveChordsFromBody(
+  body: string,
+  instrument: Instrument = 'guitar',
+): ResolvedChord[] {
+  const unique = getUniqueChordsFromBody(body);
+  const results: ResolvedChord[] = [];
+
+  for (const raw of unique) {
+    // Strip slash bass: "G/B" → work with "G"
+    const upper = raw.split('/')[0];
+
+    // Split root (letter + optional accidental) from suffix
+    const rootMatch = /^([A-G][#b]?)(.*)$/.exec(upper);
+    if (!rootMatch) continue;
+
+    const note = rootMatch[1];
+    const rawSuffix = rootMatch[2] ?? '';
+
+    const suffix =
+      SHORTHAND_TO_SUFFIX[rawSuffix] ??
+      findEquivalentSuffix(rawSuffix || 'major', note, instrument);
+
+    results.push({ raw, note, suffix });
+  }
+
+  return results;
 }
