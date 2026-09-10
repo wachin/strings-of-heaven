@@ -27,8 +27,8 @@ Strings Of Heaven is an open-source music reference tool that lets musicians loo
 | Web app | React 18 + Redux Toolkit + Vite + TypeScript |
 | Shared logic | Pure TypeScript (`shared/engine/`) |
 | State management | Redux Toolkit (same store shape on both platforms) |
-| SVG diagrams (web) | `@tombatossals/react-chords` |
-| SVG diagrams (native) | `react-native-svg` |
+| SVG diagrams (web) | Custom SVG components (React) |
+| SVG diagrams (native) | `react-native-svg` (planned, Phase 3) |
 | Styling (web) | Tailwind CSS |
 | Styling (native) | NativeWind |
 | Navigation | React Navigation (stack + bottom tabs) |
@@ -39,19 +39,21 @@ Strings Of Heaven is an open-source music reference tool that lets musicians loo
 
 ```
 /
-├── app/              # React Native — Android & iOS
-├── web/              # React + Redux — SPA / SSR
-├── shared/
+├── app/              # React Native — Android & iOS  (Phase 3, not created yet)
+├── web/              # React + Redux SPA  ✓ built (Vite)
+│   └── src/          # pages, components, hooks, tests
+├── shared/           # ✓ platform-agnostic code (used by web and future app)
 │   ├── engine/
-│   │   ├── chord_engine.ts     # chord lookup, position parsing (guitar + piano + ukulele)
+│   │   ├── chord_engine.ts     # chord lookup, position parsing, lazy data load
 │   │   └── music_theory.ts     # notes, intervals, scales, harmonization
-│   ├── data/
-│   │   ├── guitar_chords.json
-│   │   ├── piano_chords.json
-│   │   └── ukulele_chords.json
-│   └── constants/
-│       └── theory.ts
-├── api/              # Node.js / Express REST API (optional in v1)
+│   ├── store/       # Redux Toolkit store, slices, selectors, thunks
+│   ├── diagrams/     # pure geometry for fretboard & piano SVG
+│   ├── data/        # processed chord JSON (guitar / piano / ukulele)
+│   ├── constants/theory.ts
+│   └── __tests__/   # jest tests (engine, store, diagrams)
+├── scripts/
+│   └── process_chords.js       # regenerates shared/data/*.json from chords-db
+├── api/              # Node.js / Express REST API (optional, later phase)
 ├── third-party/      # Reference submodules (read-only — see below)
 ├── ROADMAP.md        # Full implementation plan for AI-assisted development
 └── README.md
@@ -121,8 +123,42 @@ git submodule update --init --recursive
 
 ```bash
 cd web
-npm install
-npm run dev
+npm install      # only needed the first time
+npm run dev      # starts Vite at http://localhost:5173/
+```
+
+Open http://localhost:5173/ in your browser. Vite hot-reloads on file changes.
+
+#### Stopping the dev server
+
+Press **Ctrl + C** in the terminal where `npm run dev` is running. If it does
+not respond (e.g. it was started in the background), kill it from another terminal:
+
+```bash
+pkill -f vite                 # stops any running Vite process
+# or, by port:
+lsof -ti:5173 | xargs kill    # macOS / Linux
+```
+
+#### Useful commands
+
+From the repo root (shared engine + store) and from `web/`:
+
+```bash
+# Type-check
+npx tsc --noEmit                 # repo root (shared)
+cd web && npx tsc --noEmit       # web app
+
+# Tests
+npx jest                         # root: engine, store, diagrams (72 tests)
+cd web && npx vitest run         # web: component tests (8 tests)
+cd web && npx vitest             # web: watch mode
+
+# Production build
+cd web && npm run build          # outputs to web/dist/
+
+# Preview the production build
+cd web && npm run preview
 ```
 
 ### Run the Android app
@@ -157,26 +193,35 @@ Both the web app and the mobile app use the same Redux store structure:
 ```ts
 {
   chords: {
-    selectedKey: "C",
-    selectedSuffix: "major",
-    currentPositionIndex: 0,
-    allSuffixes: string[],
-    allKeys: string[]
+    selectedKey: "C",            // root note (e.g. "C", "C#", "F")
+    selectedSuffix: "major",     // chosen chord type (e.g. "major", "m7")
+    currentPositionIndex: 0      // active voicing when a chord has several
   },
   scales: {
-    selectedRoot: "C",
-    selectedScale: "major",
-    notes: string[],
-    harmonizedChords: Chord[][]
+    selectedRoot: "C",           // scale root note
+    selectedScale: "major"       // scale id (see SCALE_NAMES)
   },
   ui: {
     theme: "dark" | "light",
-    instrument: "guitar" | "piano" | "ukulele"
+    instrument: "guitar" | "piano" | "ukulele",
+    dataEpoch: number            // bumped when a chord dataset finishes loading
   }
 }
 ```
 
-The `ui.instrument` field drives which diagram component is rendered everywhere. Switching it via `InstrumentToggle` updates all diagrams instantly without changing the selected chord.
+`allSuffixes` and `allKeys` are **derived** via selectors (they are not stored in
+state). The `ui.instrument` field drives which diagram component is rendered
+everywhere; switching it via `InstrumentToggle` updates all diagrams instantly
+without changing the selected chord.
+
+#### Lazy-loaded chord data
+
+The three datasets (`guitar_chords.json`, `piano_chords.json`,
+`ukulele_chords.json`) are **not** bundled into the initial web payload. The
+engine loads each instrument's data on demand via `loadChordDatabases(instrument)`
+(a dynamic `import`), so Vite emits one chunk per instrument. `ui.dataEpoch` is
+bumped once a dataset arrives so memoized selectors (`selectAllSuffixes`,
+`selectSelectedChord`, `selectSelectedPositions`) recompute.
 
 ---
 
