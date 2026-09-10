@@ -8,10 +8,13 @@ import { ExplorePage } from './pages/ExplorePage';
 import { ChordPage } from './pages/ChordPage';
 import { ScalesPage } from './pages/ScalesPage';
 import { TheoryPage } from './pages/TheoryPage';
+import { SongsPage } from './pages/SongsPage';
+import { SubmitSongPage } from './pages/SubmitSongPage';
 
 const NAV = [
   { to: '/', label: 'Home' },
   { to: '/explore', label: 'Explore' },
+  { to: '/songs', label: 'Songs' },
   { to: '/scales', label: 'Scales' },
   { to: '/theory', label: 'Theory' },
 ];
@@ -91,6 +94,8 @@ export default function App() {
           <Route path="/chord/:key/:suffix" element={<ChordPage />} />
           <Route path="/scales" element={<ScalesPage />} />
           <Route path="/theory" element={<TheoryPage />} />
+          <Route path="/songs" element={<SongsPage />} />
+          <Route path="/submit" element={<SubmitSongPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
