@@ -65,14 +65,14 @@ Strings Of Heaven is an open-source music reference tool that lets musicians loo
 
 All chord data is bundled locally from open-source databases. No external API is called at runtime.
 
-| Submodule | Content | Used for |
-|---|---|---|
-| [`tombatossals/chords-db`](https://github.com/tombatossals/chords-db) | Guitar, piano, ukulele JSON — primary database | Chord diagrams (all instruments) |
-| [`szaza/guitar-chords-db-json`](https://github.com/szaza/guitar-chords-db-json) | ~99,230 guitar chord variants | Fallback for rare guitar voicings |
-| [`seancolsen/music-theory-data`](https://github.com/seancolsen/music-theory-data) | Chords, scales, intervals in YAML with bitmasks | Theory reference & chord naming |
-| [`gciruelos/musthe`](https://github.com/gciruelos/musthe) | Python music theory library | Algorithm reference for `music_theory.ts` |
-| [`openmusictheory`](https://github.com/openmusictheory/openmusictheory.github.io) | Interactive music theory textbook | Educational content reference |
-| [`gmoe/piano_fundamentals`](https://github.com/gmoe/piano_fundamentals) | Chuan C. Chang's piano practice book | Piano feature reference |
+| Submodule | Content | Used for | Source files |
+|---|---|---|---|
+| [`tombatossals/chords-db`](https://github.com/tombatossals/chords-db) | Guitar, piano, ukulele JSON — primary database | Chord diagrams (all instruments) | `third-party/chords-db/lib/{guitar,piano,ukulele}.json` → processed by `scripts/process_chords.js` into `shared/data/{guitar,piano,ukulele}_chords.json` |
+| [`szaza/guitar-chords-db-json`](https://github.com/szaza/guitar-chords-db-json) | ~99,230 guitar chord variants | Fallback for rare guitar voicings | `third-party/guitar-chords-db-json/` |
+| [`seancolsen/music-theory-data`](https://github.com/seancolsen/music-theory-data) | Chords, scales, intervals in YAML with bitmasks | Theory reference & chord naming | — |
+| [`gciruelos/musthe`](https://github.com/gciruelos/musthe) | Python music theory library | Algorithm reference for `music_theory.ts` | — |
+| [`openmusictheory`](https://github.com/openmusictheory/openmusictheory.github.io) | Interactive music theory textbook | Educational content reference | — |
+| [`gmoe/piano_fundamentals`](https://github.com/gmoe/piano_fundamentals) | Chuan C. Chang's piano practice book | Piano feature reference | — |
 
 ### Chord data format
 
@@ -95,6 +95,24 @@ All chord data is bundled locally from open-source databases. No external API is
   ]
 }
 ```
+
+### Known data caveat: enharmonic keys
+
+The processed datasets are sourced verbatim from `chords-db`. Some instruments
+spell certain keys with flats instead of sharps, so a few sharp keys are simply
+**absent** from the data:
+
+- **Ukulele** (`third-party/chords-db/lib/ukulele.json` → `shared/data/ukulele_chords.json`) does **not** include `C#` or `F#`. It spells them as `Db` and `Gb` instead.
+- This also affects other sharp spellings when the source omits them.
+
+To keep the UI consistent (a user can still pick `C#`), the engine resolves a
+selected key to an enharmonic equivalent before lookup. Implemented in
+`shared/engine/chord_engine.ts` via `resolveKey()` (and `ENHARMONIC` map); it is
+used by `getChord`, `getChordsForKey`, `getChordPositions`, and `getSuffixes`.
+The displayed name still uses the user's chosen spelling (e.g. "C# Major"), while
+the underlying diagram is the `Db` chord.
+
+To regenerate the datasets after a `chords-db` update, run `scripts/process_chords.js`.
 
 ---
 
