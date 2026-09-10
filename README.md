@@ -35,6 +35,102 @@ Strings Of Heaven is an open-source music reference tool that lets musicians loo
 
 ---
 
+## Deployment
+
+### GitHub Pages (Static Deployment)
+
+This project is configured for **GitHub Pages** deployment out of the box. The web app runs entirely in the browser with no backend required.
+
+#### Automatic Deployment
+
+1. **Enable GitHub Pages** in your repository settings:
+   - Go to `Settings` → `Pages`
+   - Set Source to `GitHub Actions`
+
+2. **Push to main branch** — the deployment workflow (`.github/workflows/deploy.yml`) will automatically:
+   - Build the web app with the correct base path
+   - Deploy to `https://<username>.github.io/<repository-name>/`
+
+#### Manual Configuration
+
+If you need to customize the deployment:
+
+```bash
+# Set custom base path (optional)
+export VITE_BASE_PATH="/my-custom-path/"
+
+# Build for production
+cd web
+npm run build
+
+# The built files will be in web/dist/
+```
+
+The `web/vite.config.ts` automatically detects the repository name from `GITHUB_REPOSITORY` environment variable and sets the correct base path.
+
+#### Configuration Files
+
+- **Workflow**: `.github/workflows/deploy.yml` — GitHub Actions deployment
+- **Base path**: `web/vite.config.ts` — auto-configured for GitHub Pages
+- **Feature flags**: `shared/config.ts` — controls static vs API mode
+
+---
+
+### Server Deployment (Fork-Friendly)
+
+**Want to use a backend server instead of GitHub Pages?** This project is designed to be fork-friendly for server deployments.
+
+#### Quick Server Setup
+
+1. **Fork this repository**
+
+2. **Enable API mode** in `shared/config.ts`:
+   ```typescript
+   export const config: AppConfig = {
+     useApiBackend: true,  // ← Change from false to true
+     apiBaseUrl: 'https://your-server.com/api',  // ← Your API endpoint
+     // ... rest of config
+   };
+   ```
+
+3. **Implement the backend API** — the frontend expects these endpoints:
+   ```
+   GET    /api/songs           # List all songs
+   POST   /api/songs/upload    # Upload new song
+   GET    /api/songs/search    # Search songs
+   GET    /api/songs/:id       # Get specific song
+   ```
+
+4. **Deploy** to your preferred hosting provider:
+   - **Vercel/Netlify**: Frontend deployment with serverless functions
+   - **Railway/Render**: Full-stack deployment
+   - **AWS/GCP**: Container or serverless deployment
+   - **VPS**: Docker + nginx setup
+
+#### API Interface
+
+When `useApiBackend: true`, the app will use `useSongStorage.ts` to call your API instead of localStorage. The expected request/response format is documented in the hook file.
+
+#### Database Options
+
+Choose your preferred database:
+- **PostgreSQL**: For production apps with user accounts
+- **MongoDB**: For document-based song storage
+- **SQLite**: For simple self-hosted setups
+- **Supabase/Firebase**: For serverless backends
+
+#### Example Server Stack
+
+```
+Frontend: React (this repo) → Vercel/Netlify
+Backend:  Node.js + Express → Railway/Render  
+Database: PostgreSQL       → Railway/Supabase
+```
+
+**Need help setting up a server?** Check the `api/` directory (coming in Phase 4) for a reference Node.js implementation, or implement your own in any language.
+
+---
+
 ## Project structure
 
 ```
