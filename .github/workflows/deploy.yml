@@ -1,0 +1,82 @@
+# ============================================================
+# GitHub Pages — automatic deployment
+#
+# Triggers on every push to `main`.
+# Builds the Vite web app and publishes web/dist/ to
+# GitHub Pages at:
+#   https://<your-username>.github.io/strings-of-heaven/
+#
+# Prerequisites (do this once in your repository settings):
+#   Settings → Pages → Source → GitHub Actions
+# ============================================================
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # Allow running manually from the Actions tab
+  workflow_dispatch:
+
+# Grant the workflow permission to write to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment runs at a time; skip queued runs but keep in-progress ones
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build web app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          # Submodules are needed for shared/data chord JSONs and third-party refs
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Type-check shared engine
+        run: npx tsc --noEmit
+        working-directory: .
+
+      - name: Build for GitHub Pages
+        # VITE_BASE_PATH is read by vite.config.ts to set the correct base URL.
+        # Change the value if your repository has a different name.
+        run: npm run build
+        working-directory: web
+        env:
+          VITE_BASE_PATH: /strings-of-heaven/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
