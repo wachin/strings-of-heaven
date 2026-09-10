@@ -4,6 +4,8 @@
 
 export type Instrument = 'guitar' | 'piano' | 'ukulele';
 
+export type Theme = 'dark' | 'light';
+
 export interface ChordPosition {
   /**
    * Fret per string for guitar/ukulele (-1 muted, 0 open); note names

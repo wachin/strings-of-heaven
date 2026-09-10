@@ -6,6 +6,18 @@
 const fs = require('fs');
 const path = require('path');
 
+// Normalize chords-db key names to the app's canonical spelling ("Csharp" -> "C#").
+const KEY_NORMALIZE = { Csharp: 'C#', Fsharp: 'F#' };
+const normalizeKey = (key) => KEY_NORMALIZE[key] ?? key;
+function normalizeKeys(result) {
+  const normalized = {};
+  for (const [note, chords] of Object.entries(result)) {
+    const key = normalizeKey(note);
+    normalized[key] = chords.map((chord) => ({ ...chord, key }));
+  }
+  return normalized;
+}
+
 // Read raw data
 const guitarRaw = JSON.parse(fs.readFileSync('third-party/chords-db/lib/guitar.json', 'utf8'));
 const pianoRaw = JSON.parse(fs.readFileSync('third-party/chords-db/lib/piano.json', 'utf8'));
@@ -106,9 +118,9 @@ function processUkuleleChords(raw) {
 }
 
 // Generate cleaned files
-const guitarChords = processGuitarChords(guitarRaw);
-const pianoChords = processPianoChords(pianoRaw);
-const ukuleleChords = processUkuleleChords(ukuleleRaw);
+const guitarChords = normalizeKeys(processGuitarChords(guitarRaw));
+const pianoChords = normalizeKeys(processPianoChords(pianoRaw));
+const ukuleleChords = normalizeKeys(processUkuleleChords(ukuleleRaw));
 
 // Write output files
 fs.writeFileSync('shared/data/guitar_chords.json', JSON.stringify(guitarChords, null, 2));

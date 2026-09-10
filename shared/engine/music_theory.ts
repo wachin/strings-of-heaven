@@ -132,6 +132,11 @@ export function getInterval(name: string): IntervalDef {
   return def;
 }
 
+/** Pitch class (0–11) of any note name, e.g. "C#" → 1, "Eb" → 3. */
+export function pitchClassOf(noteName: string): number {
+  return ((new Note(noteName).number % 12) + 12) % 12;
+}
+
 /** Complement (inversion) of a simple interval, e.g. "M3" -> "m6". */
 export function intervalComplement(name: string): string {
   const interval = getInterval(name);

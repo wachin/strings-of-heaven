@@ -6,6 +6,8 @@ import {
   chordExists,
   parseFretString,
   chordDisplayName,
+  findEquivalentSuffix,
+  normalizeKey,
   ALL_KEYS,
 } from '../engine/chord_engine';
 
@@ -97,6 +99,32 @@ describe('parseFretString', () => {
 
   it('rejects invalid characters', () => {
     expect(() => parseFretString('xyz123')).toThrow();
+  });
+});
+
+describe('normalizeKey', () => {
+  it('normalizes sharp key spellings', () => {
+    expect(normalizeKey('Csharp')).toBe('C#');
+    expect(normalizeKey('C#')).toBe('C#');
+    expect(normalizeKey('Bb')).toBe('Bb');
+  });
+});
+
+describe('findEquivalentSuffix', () => {
+  it('returns the suffix when it exists', () => {
+    expect(findEquivalentSuffix('major', 'C', 'guitar')).toBe('major');
+  });
+
+  it('maps "minor" to "m" on piano', () => {
+    expect(findEquivalentSuffix('minor', 'C', 'piano')).toBe('m');
+  });
+
+  it('maps "m" to "minor" on guitar', () => {
+    expect(findEquivalentSuffix('m', 'C', 'guitar')).toBe('minor');
+  });
+
+  it('falls back to "major" for nonexistent suffixes', () => {
+    expect(findEquivalentSuffix('alt', 'C', 'piano')).toBe('major');
   });
 });
 

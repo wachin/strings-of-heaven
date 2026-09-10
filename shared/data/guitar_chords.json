@@ -8344,7 +8344,7 @@
       ]
     }
   ],
-  "Csharp": [
+  "C#": [
     {
       "key": "C#",
       "suffix": "major",
@@ -49832,7 +49832,7 @@
       ]
     }
   ],
-  "Fsharp": [
+  "F#": [
     {
       "key": "F#",
       "suffix": "major",

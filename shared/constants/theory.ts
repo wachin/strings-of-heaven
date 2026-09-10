@@ -221,6 +221,22 @@ export const SUFFIX_TO_CANONICAL: Record<string, string> = Object.fromEntries(
   Object.entries(CANONICAL_TO_SUFFIX).map(([type, suffix]) => [suffix, type]),
 );
 
+/**
+ * Equivalent suffixes across instruments. Guitar/ukulele use different
+ * spellings than piano for the same chord (e.g. "minor" vs "m", "7#9" vs
+ * "7sharp9"). Used when switching instruments to keep the selected chord.
+ */
+export const SUFFIX_EQUIVALENTS: Record<string, string> = {
+  minor: 'm',
+  m: 'minor',
+  '7#9': '7sharp9',
+  '7sharp9': '7#9',
+  'maj7#5': 'maj7sharp5',
+  'maj7sharp5': 'maj7#5',
+  '9#11': '9sharp11',
+  '9sharp11': '9#11',
+};
+
 /** UI display info per canonical type. */
 export interface ChordTypeInfo {
   /** Short symbol appended to the root, e.g. "Cm7". */

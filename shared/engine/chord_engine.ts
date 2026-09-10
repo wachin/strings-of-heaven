@@ -12,6 +12,7 @@ import {
   SUFFIX_TO_CANONICAL,
   CHORD_TYPE_INFO,
   CANONICAL_TO_SUFFIX,
+  SUFFIX_EQUIVALENTS,
 } from '../constants/theory';
 
 export { ALL_KEYS };
@@ -30,13 +31,23 @@ function databaseFor(instrument: Instrument): ChordDatabase {
   return DATABASES[instrument];
 }
 
+// Defensive normalization of alternate key spellings (e.g. "Csharp" -> "C#").
+export function normalizeKey(note: string): string {
+  const trimmed = note.trim();
+  const map: Record<string, string> = {
+    Csharp: 'C#', 'C#': 'C#',
+    Fsharp: 'F#', 'F#': 'F#',
+  };
+  return map[trimmed] ?? trimmed;
+}
+
 // ---------------------------------------------------------------------------
 // Lookups
 // ---------------------------------------------------------------------------
 
 /** All chords available for a root note on the given instrument. */
 export function getChordsForKey(note: string, instrument: Instrument = 'guitar'): ProcessedChord[] {
-  return databaseFor(instrument)[note] ?? [];
+  return databaseFor(instrument)[normalizeKey(note)] ?? [];
 }
 
 /** Diagram positions for a specific chord; empty array if not found. */
@@ -45,7 +56,7 @@ export function getChordPositions(
   suffix: string,
   instrument: Instrument = 'guitar',
 ): ChordPosition[] {
-  const chord = databaseFor(instrument)[note]?.find((c) => c.suffix === suffix);
+  const chord = databaseFor(instrument)[normalizeKey(note)]?.find((c) => c.suffix === suffix);
   return chord ? chord.positions : [];
 }
 
@@ -55,7 +66,7 @@ export function getChord(
   suffix: string,
   instrument: Instrument = 'guitar',
 ): ProcessedChord | undefined {
-  return databaseFor(instrument)[note]?.find((c) => c.suffix === suffix);
+  return databaseFor(instrument)[normalizeKey(note)]?.find((c) => c.suffix === suffix);
 }
 
 /** All distinct suffixes available for a root note on the given instrument. */
@@ -66,6 +77,23 @@ export function getSuffixes(note: string, instrument: Instrument = 'guitar'): st
 /** True if the chord exists in the instrument's database. */
 export function chordExists(note: string, suffix: string, instrument: Instrument = 'guitar'): boolean {
   return getChordPositions(note, suffix, instrument).length > 0;
+}
+
+/**
+ * Find a suffix that exists for the given key/instrument, equivalent to the
+ * requested one when possible (e.g. "minor" ↔ "m"), falling back to "major".
+ */
+export function findEquivalentSuffix(
+  suffix: string,
+  note: string,
+  instrument: Instrument = 'guitar',
+): string {
+  const suffixes = new Set(getSuffixes(note, instrument));
+  if (suffixes.has(suffix)) return suffix;
+  const alternative = SUFFIX_EQUIVALENTS[suffix];
+  if (alternative && suffixes.has(alternative)) return alternative;
+  if (suffixes.has('major')) return 'major';
+  return [...suffixes][0] ?? 'major';
 }
 
 // ---------------------------------------------------------------------------

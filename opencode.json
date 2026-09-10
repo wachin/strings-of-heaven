@@ -1,0 +1,26 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "bai": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "B.AI",
+      "options": {
+        "baseURL": "https://api.b.ai/v1"
+      },
+      "models": {
+        "qwen3.8-flash": {
+          "name": "Qwen 3.8-flash (B.AI)"
+        },
+        "hy3": {
+          "name": "Hy3 (B.AI)"
+        },
+        "mimo-v2.5": {
+          "name": "MiMo-V2.5"
+        },
+        "glm-5.3-flash": {
+          "name": "GLM-5.3-Flash"
+        }
+      }
+    }
+  }
+}
