@@ -1,0 +1,7 @@
+# The desktop editor only needs PyQt6: everything else goes through Node.
+#
+#   pip install -r tools/song-editor/requirements.txt
+#
+# PyQt6 wheels are self-contained (they bundle Qt), so no system Qt packages
+# are required.
+PyQt6>=6.6

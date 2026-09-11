@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { SongEntry } from '@shared/types';
+import type { SongDraft } from '@shared/types/song';
 import { config, storage } from '@shared/config';
 
 /**
@@ -20,9 +21,10 @@ import { config, storage } from '@shared/config';
 
 /**
  * The fields a caller supplies when creating or updating a song.
- * `id`, `createdAt`, `updatedAt` and `version` are managed by the storage layer.
+ * Defined in shared/types/song.ts so the web form and the desktop catalog
+ * editor (tools/song-editor) agree on the shape.
  */
-export type SongDraft = Omit<SongEntry, 'id' | 'createdAt' | 'updatedAt' | 'version'>;
+export type { SongDraft };
 
 interface UseSongStorageReturn {
   songs: SongEntry[];

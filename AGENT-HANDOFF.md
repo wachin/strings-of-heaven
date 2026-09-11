@@ -795,4 +795,80 @@ vacío y el stderr trae el error de consola.
 
 ---
 
+## 18. El problema del almacenamiento, y el editor de escritorio (11 sept 2026)
+
+### 18.1 Por qué las canciones no aparecían en el móvil
+
+`useSongStorage` guarda **solo en `localStorage`** (`useApiBackend: false`) y no
+existía ningún catálogo empaquetado. Como `localStorage` es *por dispositivo +
+navegador + origen*, una canción añadida en el PC **no existe** en el móvil, y
+se pierde al limpiar los datos del navegador.
+
+Decisión del propietario: **no** importar de golpe las 271 canciones de
+`Catalogo/`, sino revisarlas **una a una** antes de publicarlas.
+
+### 18.2 `shared/song/authoring.ts` — fuente única de verdad
+
+Nuevo módulo puro (sin React, sin DOM, sin Node) que ahora comparten la web y el
+editor de escritorio:
+
+| Función | Para qué |
+|---|---|
+| `validateSongDraft(draft)` | Las mismas reglas que tenía el formulario web (title/artist/body obligatorios, BPM 0-400, capo 0-12, tamaño máximo del body) |
+| `songSlug` / `catalogFileName` | `a-quien-ire-luis-enrrique-espinosa.json` |
+| `emptySongDraft()` | Draft en blanco |
+| `parseCatalogText(text, fileName)` | Parser *best-effort* de `Catalogo/*.txt` + `warnings` |
+
+`SongDraft` se movió a `shared/types/song.ts`. `SubmitSongPage.tsx` ya **no**
+tiene reglas propias: llama a `validateSongDraft` (así el editor no puede
+divergir de la web). Tests: `shared/__tests__/authoring.test.ts`.
+
+### 18.3 `tools/song-editor/` — editor de escritorio en PyQt6
+
+**PyQt6 no es un problema para llamar al motor TS**: el lenguaje de la UI es
+irrelevante, se hace con `subprocess` + JSON por stdin/stdout.
+
+```
+PyQt6 (main.py) ──JSON──▶ Node (engine_cli.ts) ──▶ shared/engine/*.ts
+                ◀────────                     ◀── shared/song/authoring.ts
+```
+
+- `engine_cli.ts` — CLI con protocolo JSON por líneas (`ping`, `labels`,
+  `validate`, `analyze`, `slug`, `importCatalog`, `transpose`). Proceso Node
+  **persistente** para que la preview en vivo no tenga latencia de arranque.
+- `bridge.py` — compila el CLI con **esbuild** (ya viene con Vite, en
+  `web/node_modules/.bin`; no hay dependencia nueva), lo lanza y gestiona las
+  peticiones por id con un hilo lector.
+- `main.py` — el formulario idéntico a la web + **preview en vivo** (acordes en
+  ámbar, cabeceras en índigo, columnas preservadas) + **badges de acordes** +
+  **Import from `Catalogo/*.txt`** + lista del catálogo publicado + `Ctrl+S`.
+- Guarda **un JSON por canción** en `shared/data/catalog/<slug>.json` (un archivo
+  por canción ⇒ diffs limpios y sin conflictos en git).
+- `.build/` está en `.gitignore`; se regenera en cada arranque.
+- `tools/**/*` se añadió al `include` del `tsconfig.json` raíz para que el CI
+  typechequee el CLI.
+
+Uso y flujo completo: `tools/song-editor/README.md`.
+
+⚠️ **Pendiente inmediato:** la web **todavía no lee** `shared/data/catalog/`.
+Los JSON se guardan correctamente, pero hasta que `SongsPage`/`SongViewPage` los
+carguen (con `import.meta.glob`) y los mezclen con las canciones locales, esas
+canciones no se verán en el navegador. Hay que decidir además cómo se muestran:
+entradas de catálogo en **solo lectura** (sin Edit/Delete) frente a las locales.
+
+### 18.4 Plan acordado para compartir canciones (Supabase)
+
+Segundo camino, para que 3 personas de la iglesia colaboren sin tocar git:
+**Supabase free** (verificado ago 2026): 2 proyectos, 500 MB, Auth hasta 50.000
+usuarios, REST + GraphQL, 1 GB de storage. Dos avisos: **el proyecto se pausa
+tras 1 semana sin actividad** (restauración manual) y **no hay backups** en free
+→ hacer `pg_dump` periódicos. Seguridad: usar la clave `anon` + **RLS**
+(lectura pública, escritura solo autenticados); **nunca** la `service_role` en el
+frontend.
+
+Alternativas evaluadas: Neon (no se pausa, despierta solo, pero sin Realtime ni
+editor de datos), Firebase, Appwrite (recortó el free), Render/Railway/Cloud Run.
+
+---
+
 **Estado: LISTO PARA CONTINUAR** ✅

@@ -24,6 +24,7 @@ import {
   type TimeSignature,
 } from '@shared/types/song';
 import { getUniqueChordsFromBody, parseSongBody } from '@shared/engine/chord_engine';
+import { validateSongDraft } from '@shared/song/authoring';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useSongStorage } from '../hooks/useSongStorage';
 
@@ -165,12 +166,9 @@ export function SubmitSongPage() {
   // ── Validation ─────────────────────────────────────────────────────────────
 
   function validate(): boolean {
-    const next: Partial<Record<keyof SongEntry, string>> = {};
-    if (!form.title.trim()) next.title = 'Title is required.';
-    if (!form.artist.trim()) next.artist = 'Artist is required.';
-    if (!form.body.trim()) next.body = 'Song body cannot be empty.';
-    if (form.bpm < 0 || form.bpm > 400) next.bpm = 'BPM must be between 0 and 400.';
-    if (form.capo < 0 || form.capo > 12) next.capo = 'Capo must be between 0 and 12.';
+    // Shared with the desktop catalog editor (tools/song-editor) so both apply
+    // exactly the same rules — see shared/song/authoring.ts.
+    const next = validateSongDraft(form);
     setErrors(next);
     return Object.keys(next).length === 0;
   }

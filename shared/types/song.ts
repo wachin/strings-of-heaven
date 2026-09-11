@@ -140,6 +140,17 @@ export interface SongEntry {
   version: number;
 }
 
+// ── Draft (caller-supplied fields) ───────────────────────────────────────────
+
+/**
+ * The fields a caller supplies when creating or editing a song.
+ *
+ * `id`, `createdAt`, `updatedAt` and `version` are owned by the storage layer
+ * (localStorage today, a REST API later), so they are excluded here. Both the
+ * web form and the PyQt6 catalog editor build one of these.
+ */
+export type SongDraft = Omit<SongEntry, 'id' | 'createdAt' | 'updatedAt' | 'version'>;
+
 // ── Factory ───────────────────────────────────────────────────────────────────
 
 /** Return a blank SongEntry with sensible defaults, ready to bind to a form. */

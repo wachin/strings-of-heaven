@@ -15,6 +15,6 @@
     "skipLibCheck": true,
     "types": ["node", "jest"]
   },
-  "include": ["shared/**/*", "scripts/**/*"],
+  "include": ["shared/**/*", "scripts/**/*", "tools/**/*"],
   "exclude": ["node_modules", "third-party", "app", "web", "api"]
 }
