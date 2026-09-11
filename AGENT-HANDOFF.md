@@ -744,6 +744,55 @@ local). Es lo habitual en desarrollo, pero si se quiere solo loopback, usar
 dirección que usará el usuario, no solo `localhost`. Un `localhost` que resuelve
 a IPv6 puede dar 200 mientras `127.0.0.1` falla.
 
+### 17.6 Dev server: página en blanco por `process.env` (⚠️ bug importante)
+
+**Síntoma:** con el puerto ya accesible, `http://127.0.0.1:5173/` cargaba pero
+mostraba una **página totalmente en blanco**, en Chrome y en Firefox. El log de
+Vite no mostraba nada, porque el fallo es en el navegador.
+
+**Diagnóstico:** se reprodujo con Chromium headless (`--dump-dom` +
+`--enable-logging=stderr`) y apareció el error real:
+
+```
+Uncaught ReferenceError: process is not defined
+  source: .../shared/config.ts
+```
+
+`shared/config.ts` lee `process.env.VITE_API_BASE_URL` y `process.env.VITE_BASE_PATH`.
+**`process` no existe en el navegador**, así que el módulo lanzaba al evaluarse,
+el grafo de módulos se rompía y `#root` quedaba vacío — sin ningún error en el
+servidor.
+
+**Por qué solo afectaba a dev:** el build de producción **sí** sustituye esas
+referencias (el bundle no contiene ni un `process.env.`), por eso el sitio en vivo
+funcionaba. En dev Vite no las sustituía.
+
+**Fix:** declararlas en `define` de `web/vite.config.ts`:
+
+```ts
+'process.env.VITE_API_BASE_URL': JSON.stringify(process.env.VITE_API_BASE_URL ?? ''),
+'process.env.VITE_BASE_PATH':     JSON.stringify(process.env.VITE_BASE_PATH ?? ''),
+```
+
+**Nota de arquitectura:** *no* cambiar `shared/config.ts` a `import.meta.env`,
+porque ese archivo también se ejecuta en Node (Jest, `module: commonjs`) y
+`import.meta` no es válido ahí. `define` es la vía que mantiene ambos mundos.
+Cuidado: si alguien añade un `process.env.X` nuevo en código que llega al
+navegador, hay que declararlo también en `define` o la página volverá a quedar
+en blanco **sin error visible en el servidor**.
+
+**Cómo diagnosticar esto en el futuro (receta que funcionó):**
+
+```bash
+google-chrome --headless=new --no-sandbox --user-data-dir=/tmp/cp \
+  --virtual-time-budget=10000 --enable-logging=stderr --v=0 \
+  --dump-dom http://127.0.0.1:5173/ >/tmp/dom.html 2>/tmp/err.txt
+grep -iE "CONSOLE|Uncaught" /tmp/err.txt
+```
+
+Sirve para cualquier «página en blanco»: `--dump-dom` muestra si `#root` quedó
+vacío y el stderr trae el error de consola.
+
 ---
 
 **Estado: LISTO PARA CONTINUAR** ✅

@@ -91,6 +91,14 @@ export default defineConfig({
   define: {
     // Pass base path to the application
     __VITE_BASE_PATH__: JSON.stringify(getBasePath()),
+
+    // shared/config.ts reads `process.env.*`, but `process` does not exist in
+    // the browser. In dev Vite does not substitute these, so that module threw
+    // "ReferenceError: process is not defined" and the page stayed blank.
+    // Replacing the exact expressions statically fixes dev while keeping the
+    // file valid under Node/Jest (where `process` does exist).
+    'process.env.VITE_API_BASE_URL': JSON.stringify(process.env.VITE_API_BASE_URL ?? ''),
+    'process.env.VITE_BASE_PATH': JSON.stringify(process.env.VITE_BASE_PATH ?? ''),
   },
   
   test: {
