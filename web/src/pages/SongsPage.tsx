@@ -2,7 +2,7 @@
  * SongsPage — lists all songs saved in localStorage.
  *
  * Shows title, artist, type, difficulty, capo, BPM, and last-edited date.
- * Each row links to the song view (future) and has an Edit button.
+ * The title links to the song view (/song/:id); each row also has Edit/Delete.
  */
 
 import { useEffect, useState } from 'react';
@@ -111,7 +111,12 @@ export function SongsPage() {
                 {/* Left: song info */}
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold">{song.title}</span>
+                    <Link
+                      to={`/song/${encodeURIComponent(song.id)}`}
+                      className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
+                    >
+                      {song.title}
+                    </Link>
                     <span className="text-slate-500 dark:text-slate-400">—</span>
                     <span className="text-slate-600 dark:text-slate-300">{song.artist}</span>
                   </div>

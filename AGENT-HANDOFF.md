@@ -3,8 +3,8 @@
 > Este documento describe el estado exacto del proyecto en el momento del traspaso.
 > El siguiente agente debe leerlo completo antes de escribir cualquier código.
 
-**Fecha de actualización:** Septiembre 10, 2026  
-**Estado:** Web app funcional con sistema de subida de canciones + GitHub Pages configurado
+**Fecha de actualización:** Septiembre 11, 2026  
+**Estado:** Web app funcional + visualización individual de canciones (P1/P2 completadas)
 
 ---
 
@@ -44,28 +44,35 @@ Dos plataformas que comparten el mismo motor y store:
 | Componentes UI | ✅ Navegación + layouts | `web/src/components/` |
 | **Sistema de canciones** | ✅ NUEVO - Completo | `shared/types/song.ts` + hooks |
 | **Subida de canciones** | ✅ NUEVO - Completo | `web/src/pages/SubmitSongPage.tsx` |
+| **Vista individual de canción** | ✅ NUEVO - Completo | `web/src/pages/SongViewPage.tsx` |
+| **Renderer de body con acordes clicables** | ✅ NUEVO - Completo | `web/src/components/SongBody.tsx` |
+| **Edición in-place (`updateSong`)** | ✅ NUEVO - Corregido | `web/src/hooks/useSongStorage.ts` |
 | **localStorage/API storage** | ✅ NUEVO - Completo | `web/src/hooks/useSongStorage.ts` |
 | **GitHub Pages config** | ✅ NUEVO - Completo | `.github/workflows/deploy.yml` + config |
-| Tests (jest) | ✅ Pasando | `shared/__tests__/` + `web/src/__tests__/` |
-| TypeScript | ✅ 0 errores | Todo tipado |
+| Tests (jest) | ✅ 75 pasando | `shared/__tests__/` |
+| Tests (vitest) | ✅ 22 pasando | `web/src/__tests__/` |
+| TypeScript (shared) | ✅ 0 errores | `npx tsc --noEmit` |
+| TypeScript (web) | ✅ 0 errores | `cd web && npx tsc --noEmit` |
 
 ### 2.2 Lo que NO existe todavía (próximas fases)
 
-- **Visualización individual de canciones** — `SongViewPage` para mostrar una canción guardada
-- **Panel de acordes lateral** — widget sticky con pestañas Guitar/Ukulele/Piano 
-- **Transposición en vivo en UI** — controles +/- en la página de canción
-- **Autoscroll** — funcionalidad de scroll automático
-- **Impresión/PDF** — exportar canciones con diagramas
+- **Panel de acordes lateral** — widget sticky con pestañas Guitar/Ukulele/Piano (P3)
+- **Transposición en vivo en UI** — controles +/- en la página de canción (P4)
+- **CapoSelector** — dropdown 0-12 con "sounding key" calculado (P5)
+- **Autoscroll** — funcionalidad de scroll automático (P6)
+- **Impresión/PDF** — exportar canciones con diagramas (P7)
+- **Búsqueda global** — página `/search?q=...` (P8)
+- **Importación del catálogo** — migrar `Catalogo/` a localStorage (P9)
 - `app/` — directorio de la app React Native (no creado)
 - `api/` — backend Node.js/Express (opcional)
 
-### 2.3 Archivos limpios - NO hay cambios sin commit
+### 2.3 Estado del working tree
 
-El proyecto está completamente limpio. Todos los cambios recientes están committeados:
-- ✅ GitHub Pages configuration
-- ✅ Song submission system 
-- ✅ Storage hooks and types
-- ✅ Web app enhancements
+⚠️ **Hay cambios SIN commit** (sesión del 11 sept 2026) — ver sección 17:
+- P1/P2: `SongViewPage` + `SongBody` (nuevos)
+- Fix: import roto de `SongEntry` en `@shared/types` (4 errores de tipo)
+- Fix: modo edición duplicaba canciones (nuevo `updateSong`)
+- Tests nuevos: `SongBody.test.tsx`, `SongViewPage.test.tsx`, `useSongStorage.test.tsx`
 ---
 
 ## 3. Estructura de directorios actualizada
@@ -95,13 +102,15 @@ strings-of-heaven/
 │   │   │   ├── ChordPage.tsx         # ✅ Vista individual de acorde
 │   │   │   ├── ScalesPage.tsx        # ✅ Escalas musicales
 │   │   │   ├── TheoryPage.tsx        # ✅ Teoría musical
-│   │   │   ├── SongsPage.tsx         # ✅ Lista de canciones guardadas
-│   │   │   └── SubmitSongPage.tsx    # ✅ NUEVO - Formulario subida canciones
+│   │   │   ├── SongsPage.tsx         # ✅ Lista de canciones guardadas (título → /song/:id)
+│   │   │   ├── SongViewPage.tsx      # ✅ NUEVO - Vista individual /song/:id
+│   │   │   └── SubmitSongPage.tsx    # ✅ NUEVO - Formulario subida/edición canciones
 │   │   ├── hooks/
 │   │   │   ├── usePageTitle.ts       # ✅ Hook para títulos
-│   │   │   └── useSongStorage.ts     # ✅ NUEVO - Hook localStorage/API
+│   │   │   └── useSongStorage.ts     # ✅ NUEVO - Hook localStorage/API (+updateSong)
 │   │   ├── components/               # ✅ Componentes UI compartidos
-│   │   ├── __tests__/                # ✅ Tests web
+│   │   │   └── SongBody.tsx          # ✅ NUEVO - Body con acordes clicables
+│   │   ├── __tests__/                # ✅ Tests web (22 pasando)
 │   │   ├── App.tsx                   # ✅ Router + navegación
 │   │   └── main.tsx                  # ✅ Entry point
 │   ├── dist/                         # ✅ Build output (GitHub Pages)
@@ -153,16 +162,21 @@ interface UseSongStorageReturn {
   songs: SongEntry[];
   loading: boolean;
   error: string | null;
-  saveSong: (song) => Promise<string>;     // Retorna ID de la canción guardada
-  loadSongs: () => Promise<void>;          // Carga todas las canciones
-  searchSongs: (query) => Promise<SongEntry[]>; // Búsqueda por título/artista/contenido
-  getSong: (id) => Promise<SongEntry | null>;   // Obtiene canción por ID
-  deleteSong: (id) => Promise<void>;       // Elimina canción
+  saveSong: (song: SongDraft) => Promise<string>;            // Crea → ID nuevo
+  updateSong: (id, song: SongDraft) => Promise<string>;      // ✅ NUEVO - Actualiza in-place
+  loadSongs: () => Promise<void>;                            // Carga todas las canciones
+  searchSongs: (query) => Promise<SongEntry[]>;              // Búsqueda título/artista/contenido
+  getSong: (id) => Promise<SongEntry | null>;                // Obtiene canción por ID
+  deleteSong: (id) => Promise<void>;                         // Elimina canción
 }
+
+// SongDraft = Omit<SongEntry, 'id' | 'createdAt' | 'updatedAt' | 'version'>
+// El storage gestiona id/createdAt/updatedAt/version (saveSong pone version: 1,
+// updateSong conserva id+createdAt y hace version + 1).
 
 // Funciona en dos modos:
 // 1. STATIC MODE (por defecto) - localStorage
-// 2. API MODE (configurable) - backend server
+// 2. API MODE (configurable) - backend server (incluye PUT /songs/:id)
 ```
 
 ### 4.3 Página de subida (`web/src/pages/SubmitSongPage.tsx`)
@@ -180,9 +194,31 @@ interface UseSongStorageReturn {
 ✅ **Completamente funcional** con:
 - **Lista de canciones** — título, artista, tipo, dificultad, capo, BPM, fecha
 - **Búsqueda** — por título o artista
+- **Título clicable** — abre `/song/:id` (✅ NUEVO)
 - **Acciones** — editar, eliminar (con confirmación)
 - **Botón prominente** — "+ Add song" que lleva a `/submit`
 - **Estado vacío** — mensaje amigable con enlace a subir primera canción
+
+### 4.5 Página de vista individual (`web/src/pages/SongViewPage.tsx`) — ✅ NUEVO
+
+Ruta `/song/:id`. Carga la canción con `getSong(id)` y muestra:
+- Breadcrumb (My songs / título), título grande y artista
+- Chips de metadatos: tipo, dificultad, key, capo (`none` si 0), tempo, compás, tuning, versión
+- Bloque "Notes" con la descripción (solo si no está vacía)
+- Body renderizado con `SongBody`
+- Botones **Edit** (→ `/submit?id=...`) y **All songs**
+- Estados: spinner de carga, caja de error roja, mensaje "This song does not exist in this browser."
+
+### 4.6 Renderer de body (`web/src/components/SongBody.tsx`) — ✅ NUEVO
+
+- Usa `parseSongBody()` para clasificar líneas (`chord | lyric | blank | header`)
+- **Preserva el espaciado original**: cada token de acorde conserva su columna, así los
+  acordes quedan alineados sobre las sílabas correctas
+- Acordes en **amber** y clicables → `/chord/:note/:suffix` (resueltos con
+  `resolveChordsFromBody()`, p. ej. `Am` → `/chord/A/minor`)
+- Headers `[Verse 1]` en **indigo**, letras en texto normal
+- Normaliza CRLF y acepta bodies vacíos (muestra placeholder)
+- Respeta el instrumento activo del store para resolver el suffix
 
 ---
 
@@ -306,17 +342,19 @@ solo tu puedes satisfacer.
 
 ## 8. Próximas tareas (en orden de prioridad)
 
-### ALTA PRIORIDAD — Visualización de canciones
+### ALTA PRIORIDAD — Visualización de canciones ✅ COMPLETADA
 
-- [ ] **P1** `SongViewPage` (`/song/:id`) — página para mostrar una canción individual
+- [x] **P1** `SongViewPage` (`/song/:id`) — página para mostrar una canción individual
   - Usar `getSong(id)` del hook `useSongStorage`
   - Layout: título, artista, metadata arriba + body renderizado abajo
   - Botón "Edit" que lleva a `/submit?id=xxx`
+  - ✅ Hecho: `web/src/pages/SongViewPage.tsx` + ruta en `App.tsx`
 
-- [ ] **P2** `SongBody` component — renderiza body con acordes clicables
+- [x] **P2** `SongBody` component — renderiza body con acordes clicables
   - Usar `parseSongBody()` para classificar líneas
   - Acordes en color amber, headers en indigo, letras en texto normal
   - Los acordes son clicables → abren `/chord/:note/:suffix`
+  - ✅ Hecho: `web/src/components/SongBody.tsx` (preserva columnas del original)
 
 ### MEDIA PRIORIDAD — Panel de acordes y controles
 
@@ -355,14 +393,19 @@ Ver sección correspondiente en ROADMAP.md.
 /scales (ScalesPage)   ✅ Escalas musicales
 /theory (TheoryPage)   ✅ Teoría musical
 /songs (SongsPage)     ✅ Lista de canciones guardadas + búsqueda + CRUD
+/song/:id              ✅ NUEVO - Vista individual de canción (P1/P2)
 /submit (SubmitSongPage) ✅ Formulario subida/edición canciones
 ```
 
 **Falta implementar:**
 ```
-/song/:id              ← Vista individual de canción (ALTA PRIORIDAD)
-/search?q=...          ← Búsqueda global (BAJA PRIORIDAD)
+/search?q=...          ← Búsqueda global (BAJA PRIORIDAD, P8)
 ```
+
+⚠️ **Nota de despliegue (GitHub Pages):** las rutas de arriba son del lado del cliente.
+Navegar dentro de la app funciona, pero **abrir/recargar una URL profunda**
+(p. ej. `https://wachin.github.io/strings-of-heaven/song/abc`) devuelve 404 porque
+GitHub Pages no reescribe a `index.html`. Ver sección 17.3 para las opciones.
 
 ---
 
@@ -388,6 +431,7 @@ El proyecto está **completamente preparado** para que otros desarrolladores hag
    GET    /api/songs/search?q= → { songs: SongEntry[] }  
    GET    /api/songs/:id       → { song: SongEntry }
    DELETE /api/songs/:id       → { success: boolean }
+   PUT    /api/songs/:id       → { success: boolean, id: string }   # ✅ NUEVO (edición)
    ```
 
 3. **Desplegar** en la plataforma preferida:
@@ -427,8 +471,10 @@ npm run preview                # Preview del build
 # ══════════════════════════════════════════════════════════════════
 cd ..                          # Volver a la raíz
 npx tsc --noEmit              # Type-check shared/ (debe ser 0 errores)
-npx jest                       # Tests shared/ (~11s, todos pasando)
-cd web && npm run test         # Tests web/ (vitest)
+npx jest                       # Tests shared/ (75 pasando, ~11s)
+cd web && npm run test         # Tests web/ (vitest, 22 pasando)
+cd web && npm run typecheck    # ⚠️ Type-check web/ (debe ser 0 errores — usar SIEMPRE)
+cd web && npm run build        # Verificar que el build de producción compila
 
 # ══════════════════════════════════════════════════════════════════
 # DEPLOYMENT
@@ -548,22 +594,81 @@ VITE_API_BASE_URL=https://api.com   # Para modo servidor
 
 ## 16. Siguiente agente — Tareas inmediatas sugeridas
 
-### Opción A: Visualización de canciones (recomendado)
-1. Crear `SongViewPage` (`/song/:id`)
-2. Componente `SongBody` para renderizar con acordes clicables  
-3. Agregar navegación desde `SongsPage` → click en canción → abrir `/song/:id`
+### ✅ Opción A: Visualización de canciones — COMPLETADA (11 sept 2026)
+1. ~~Crear `SongViewPage` (`/song/:id`)~~ ✅
+2. ~~Componente `SongBody` para renderizar con acordes clicables~~ ✅
+3. ~~Agregar navegación desde `SongsPage` → click en canción → abrir `/song/:id`~~ ✅
 
-### Opción B: Panel de acordes lateral  
-1. Instalar `@tombatossals/react-chords`
-2. Crear componente `ChordsPanel` 
-3. Integrar en layout con pestañas Guitar/Ukulele/Piano
+### Opción B: Panel de acordes lateral (SIGUIENTE RECOMENDADA — P3)
+1. Decidir si reutilizar los SVG custom existentes (`ChordDiagram.tsx` ya funciona)
+   en lugar de instalar `@tombatossals/react-chords`
+2. Crear componente `ChordsPanel` (pestañas Guitar/Ukulele/Piano)
+3. Integrar en `SongViewPage` como columna lateral sticky
 
-### Opción C: Migración del catálogo
+### Opción C: Transposición + capo en la vista de canción (P4/P5)
+1. `TransposeControls` con estado local de semitonos → `transposeSongBody()`
+2. `CapoSelector` 0-12 + "Sounding key" calculado
+   - El motor ya expone `transposeSongBody`, `transposeChordName` y `transposeChordLine`
+
+### Opción D: Migración del catálogo (P9)
 1. Explorar estructura del directorio `Catalogo/`
 2. Crear script para convertir archivos existentes a `SongEntry[]`
 3. Función "Import from catalog" en la UI
 
-**Recomendación:** Comenzar con **Opción A** (visualización) ya que es la funcionalidad más demandada por los usuarios.
+**Recomendación:** **Opción B** (panel de acordes) o **Opción C** (transposición), que
+completan la experiencia de la vista de canción recién creada.
+
+---
+
+## 17. Sesión del 11 sept 2026 — cambios y hallazgos
+
+### 17.1 Completado (Opción A)
+- `web/src/components/SongBody.tsx` — render con acordes clicables, preservando columnas
+- `web/src/pages/SongViewPage.tsx` — vista `/song/:id` con metadatos, notas y acciones
+- `web/src/App.tsx` — ruta `/song/:id`
+- `web/src/pages/SongsPage.tsx` — el título de cada canción enlaza a su vista
+- `web/src/pages/SubmitSongPage.tsx` — tras guardar navega a `/song/:id`
+- Tests nuevos (14): `SongBody.test.tsx` (6), `SongViewPage.test.tsx` (4),
+  `useSongStorage.test.tsx` (4)
+
+### 17.2 Bugs corregidos
+
+**Bug 1 — El handoff afirmaba "TypeScript: 0 errores", pero la web NO compilaba limpio.**
+`web/src/hooks/useSongStorage.ts` importaba `SongEntry` desde `@shared/types`, pero
+no existía `shared/types/index.ts` y el alias resuelve a `shared/types.ts`, que no lo
+exportaba. Efectos: `SongEntry` era `any` (silenciando más errores) y 4 errores TS.
+- **Fix:** `shared/types.ts` ahora hace `export * from './types/song'`.
+- Al arreglarlo apareció que `version` faltaba en el payload → se añadió el tipo
+  exportado `SongDraft` (`Omit<SongEntry, 'id'|'createdAt'|'updatedAt'|'version'>`).
+
+**Bug 2 — El modo edición DUPLICABA canciones.**
+`SubmitSongPage` con `?id=xxx` llamaba a `saveSong()`, que siempre hace `push` con un
+id nuevo: editar creaba una segunda copia y la original quedaba intacta.
+- **Fix:** nuevo `updateSong(id, song)` en `useSongStorage` (localStorage + API `PUT`).
+  Conserva `id` y `createdAt`, actualiza `updatedAt` y hace `version + 1`
+  (coherente con el modelo documentado en `SongEntry`).
+
+### 17.3 Pendientes conocidos / decisiones del propietario
+
+1. **Fallback SPA en GitHub Pages (importante para compartir canciones).**
+   No existe `404.html` ni `.nojekyll` en `web/dist`, así que recargar o abrir
+   directamente `/song/:id` (o `/songs`, `/submit`…) da 404 en GitHub Pages.
+   Opciones:
+   - **A** (mínimo): publicar un `404.html` que redirija conservando la ruta
+     (técnica `spa-github-pages`), + `.nojekyll`.
+   - **B**: cambiar a `HashRouter` → URLs `#/song/abc`, deep links funcionan sin
+     servidor, pero cambia todas las URLs actuales.
+   → **Requiere decisión del propietario; no se ha tocado.**
+
+2. **CI no valida la web.** `.github/workflows/deploy.yml` solo ejecuta
+   `npx tsc --noEmit` en la raíz (shared). Por eso los 4 errores de tipo de la web
+   llegaron a `main` sin detectarse. Recomendado añadir al workflow:
+   `npm run typecheck` y `npm run test` dentro de `web/`.
+
+3. **Licencia inconsistente en el footer.** `web/src/App.tsx` dice
+   *"open source, MIT licensed"*, pero `LICENSE` y `package.json` son **GPL-3.0-only**
+   (y el handoff lo confirma). Hay que corregir el texto del footer.
+   → **Requiere confirmación del propietario; no se ha tocado.**
 
 ---
 

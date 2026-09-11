@@ -35,3 +35,14 @@ export interface ProcessedChord {
 export interface ChordDatabase {
   [key: string]: ProcessedChord[];
 }
+
+/**
+ * Song model types (SongEntry, SongType, Difficulty, …) — re-exported here so
+ * consumers can use a single import path:
+ *
+ *   import { SongEntry } from '@shared/types';
+ *
+ * Note: the alias `@shared/types` resolves to this file, not to the `types/`
+ * directory, so this re-export is what makes the song types reachable from it.
+ */
+export * from './types/song';

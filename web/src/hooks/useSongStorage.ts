@@ -15,13 +15,22 @@ import { config, storage } from '@shared/config';
  *    - POST /api/songs/upload    → { success: boolean, id: string }
  *    - GET  /api/songs/search?q= → { songs: SongEntry[] }
  *    - GET  /api/songs/:id       → { song: SongEntry }
+ *    - PUT  /api/songs/:id       → { success: boolean, id: string }
  */
+
+/**
+ * The fields a caller supplies when creating or updating a song.
+ * `id`, `createdAt`, `updatedAt` and `version` are managed by the storage layer.
+ */
+export type SongDraft = Omit<SongEntry, 'id' | 'createdAt' | 'updatedAt' | 'version'>;
 
 interface UseSongStorageReturn {
   songs: SongEntry[];
   loading: boolean;
   error: string | null;
-  saveSong: (song: Omit<SongEntry, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
+  saveSong: (song: SongDraft) => Promise<string>;
+  /** Update an existing song in place. Keeps its id/createdAt, bumps `version`. */
+  updateSong: (id: string, song: SongDraft) => Promise<string>;
   loadSongs: () => Promise<void>;
   searchSongs: (query: string) => Promise<SongEntry[]>;
   getSong: (id: string) => Promise<SongEntry | null>;
@@ -39,13 +48,14 @@ export function useSongStorage(): UseSongStorageReturn {
   };
 
   // localStorage implementation (static mode)
-  const saveToLocalStorage = useCallback(async (song: Omit<SongEntry, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+  const saveToLocalStorage = useCallback(async (song: SongDraft): Promise<string> => {
     const now = new Date().toISOString();
     const newSong: SongEntry = {
       ...song,
       id: generateId(),
       createdAt: now,
       updatedAt: now,
+      version: 1,
     };
 
     const existing = localStorage.getItem(storage.keys.songs);
@@ -65,6 +75,44 @@ export function useSongStorage(): UseSongStorageReturn {
     
     setSongs(existingSongs);
     return newSong.id;
+  }, []);
+
+  /**
+   * Update a song in place, preserving its id and createdAt.
+   * The `version` field is bumped, as documented in SongEntry.
+   */
+  const updateInLocalStorage = useCallback(async (
+    id: string,
+    song: SongDraft,
+  ): Promise<string> => {
+    const stored = localStorage.getItem(storage.keys.songs);
+    const allSongs: SongEntry[] = stored ? JSON.parse(stored) : [];
+
+    const index = allSongs.findIndex((s) => s.id === id);
+    if (index === -1) {
+      throw new Error('Song not found');
+    }
+
+    const previous = allSongs[index];
+    const updated: SongEntry = {
+      ...previous,
+      ...song,
+      id: previous.id,
+      createdAt: previous.createdAt,
+      updatedAt: new Date().toISOString(),
+      version: (previous.version ?? 1) + 1,
+    };
+
+    if (JSON.stringify(updated).length > storage.maxSongSize) {
+      throw new Error(`Song too large (max ${storage.maxSongSize} characters)`);
+    }
+
+    const next = [...allSongs];
+    next[index] = updated;
+    localStorage.setItem(storage.keys.songs, JSON.stringify(next));
+
+    setSongs(next);
+    return updated.id;
   }, []);
 
   const loadFromLocalStorage = useCallback(async (): Promise<void> => {
@@ -103,7 +151,7 @@ export function useSongStorage(): UseSongStorageReturn {
   }, []);
 
   // API implementation (server mode)
-  const saveToAPI = useCallback(async (song: Omit<SongEntry, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+  const saveToAPI = useCallback(async (song: SongDraft): Promise<string> => {
     const response = await fetch(`${config.apiBaseUrl}/songs/upload`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -116,6 +164,24 @@ export function useSongStorage(): UseSongStorageReturn {
     
     const result = await response.json();
     return result.id;
+  }, []);
+
+  const updateInAPI = useCallback(async (
+    id: string,
+    song: SongDraft,
+  ): Promise<string> => {
+    const response = await fetch(`${config.apiBaseUrl}/songs/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(song),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Update failed: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result.id ?? id;
   }, []);
 
   const loadFromAPI = useCallback(async (): Promise<void> => {
@@ -155,7 +221,7 @@ export function useSongStorage(): UseSongStorageReturn {
   }, [loadFromAPI]);
 
   // Main hook methods (switch between localStorage and API based on config)
-  const saveSong = useCallback(async (song: Omit<SongEntry, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+  const saveSong = useCallback(async (song: SongDraft): Promise<string> => {
     setLoading(true);
     setError(null);
     
@@ -172,6 +238,26 @@ export function useSongStorage(): UseSongStorageReturn {
       setLoading(false);
     }
   }, [saveToAPI, saveToLocalStorage]);
+
+  const updateSong = useCallback(async (
+    id: string,
+    song: SongDraft,
+  ): Promise<string> => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      return config.useApiBackend
+        ? await updateInAPI(id, song)
+        : await updateInLocalStorage(id, song);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update song';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [updateInAPI, updateInLocalStorage]);
 
   const loadSongs = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -250,6 +336,7 @@ export function useSongStorage(): UseSongStorageReturn {
     loading,
     error,
     saveSong,
+    updateSong,
     loadSongs,
     searchSongs,
     getSong,

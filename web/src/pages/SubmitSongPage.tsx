@@ -137,7 +137,7 @@ export function SubmitSongPage() {
   usePageTitle(isEditing ? 'Edit song — Strings Of Heaven' : 'Submit a song — Strings Of Heaven');
 
   const navigate = useNavigate();
-  const { saveSong, getSong, loading, error } = useSongStorage();
+  const { saveSong, updateSong, getSong, loading, error } = useSongStorage();
 
   const [form, setForm] = useState<SongEntry>(emptySongEntry);
   const [saved, setSaved] = useState(false);
@@ -197,11 +197,14 @@ export function SubmitSongPage() {
         body: form.body,
       };
       
-      const savedId = await saveSong(songData);
+      // Editing updates the existing entry in place; submitting creates a new one.
+      const savedId = editId
+        ? await updateSong(editId, songData)
+        : await saveSong(songData);
       setSaved(true);
-      
-      // Navigate to the songs list after a short delay
-      setTimeout(() => navigate('/songs'), 900);
+
+      // Open the saved song after a short delay so the confirmation is visible.
+      setTimeout(() => navigate(`/song/${encodeURIComponent(savedId)}`), 900);
     } catch (err) {
       console.error('Failed to save song:', err);
       // Error is handled by the useSongStorage hook and shown in the UI
