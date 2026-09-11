@@ -553,24 +553,35 @@ npm install react-svg-chord-diagram
 
 ## 14. Estado de deployment actual
 
-### 14.1 GitHub Pages
+### 14.1 GitHub Pages — ✅ FUNCIONANDO (verificado 11 sept 2026)
 
-🔴 **NUNCA HA ESTADO FUNCIONANDO.** La versión anterior de este handoff afirmaba
-"Deploy automático configurado ✅" con URL `https://wachin.github.io/strings-of-heaven/`,
-pero los 4 runs del workflow fallaron y el sitio nunca se publicó (esa URL devuelve
-el 404 del sitio Hugo del propietario). Ver **sección 17.3** para las causas y los
-arreglos ya aplicados.
+**URL en vivo: `https://wachin.github.io/strings-of-heaven/`**
 
-Configuración (ya corregida en el repo):
-- URL prevista: `https://wachin.github.io/strings-of-heaven/`
-- Workflow: `.github/workflows/deploy.yml`
-- Trigger: push a `main` branch
+Historia: durante mucho tiempo este handoff afirmó que el deploy funcionaba, pero
+**nunca se había publicado** (los 4 primeros runs del workflow fallaron). Ver
+**sección 17.3** para las 3 causas y los arreglos. Estado actual verificado contra
+la URL real:
+
+| Comprobación | Resultado |
+|---|---|
+| `index.html` | HTTP 200, contiene `<div id="root">` |
+| Entry JS (`/assets/index-*.js`) | HTTP 200 |
+| Entry CSS (`/assets/index-*.css`) | HTTP 200 |
+| Deep link (`/song/prueba`) | sirve la app (`404.html` idéntico a `index.html`) |
+| Deployment en GitHub | estado `success` |
+
+Configuración:
+- Workflow: `.github/workflows/deploy.yml` (10 pasos: instala raíz + web,
+  typecheck y tests de ambos, build, upload)
+- Trigger: push a `main` branch, o manual con `workflow_dispatch`
 - Base path: `VITE_BASE_PATH=/strings-of-heaven/` en el workflow (vite.config.ts
   también sabe auto-detectarlo desde `GITHUB_REPOSITORY`)
 - Fallback SPA: `dist/404.html` + `dist/.nojekyll` generados por el plugin
   `spaFallback()` de `vite.config.ts`
+- ⚙️ Ajuste del repo (ya hecho): `Settings → Pages → Source → GitHub Actions`
 
-**Pendiente del propietario:** `Settings → Pages → Source → GitHub Actions`.
+⚠️ Tras un deploy, el CDN de Pages puede tardar uno o dos minutos en servir todos
+los assets: justo después de un deploy es normal ver 404 en `/assets/...`.
 
 ### 14.2 Para deployments custom
 
@@ -697,9 +708,10 @@ del propietario**. El deploy podría haber "funcionado" y la app seguiría rota.
   404.html, la app arranca en esa URL y el router (con basename) la resuelve.
   No usa el truco de `sessionStorage` ni redirecciones.
 
-**Requisito manual del propietario (pendiente):**
-`Settings → Pages → Source` debe estar en **GitHub Actions**. La API de Pages del
-repo devolvía 404, lo que indica que Pages no estaba configurado como sitio.
+**Requisito del propietario — ✅ HECHO:** `Settings → Pages → Source` está en
+**GitHub Actions**. El deploy pasó a verde en el run `56c6f36` y el sitio quedó
+publicado. (Nota: `GET /repos/.../pages` por API sin autenticar sigue devolviendo
+404 aunque Pages esté activo; no es un indicador fiable.)
 
 ### 17.4 Licencia — corregida ✅
 
