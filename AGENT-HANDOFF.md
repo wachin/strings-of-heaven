@@ -50,7 +50,7 @@ Dos plataformas que comparten el mismo motor y store:
 | **localStorage/API storage** | ✅ NUEVO - Completo | `web/src/hooks/useSongStorage.ts` |
 | **GitHub Pages config** | ✅ NUEVO - Completo | `.github/workflows/deploy.yml` + config |
 | Tests (jest) | ✅ 75 pasando | `shared/__tests__/` |
-| Tests (vitest) | ✅ 22 pasando | `web/src/__tests__/` |
+| Tests (vitest) | ✅ 28 pasando | `web/src/__tests__/` |
 | TypeScript (shared) | ✅ 0 errores | `npx tsc --noEmit` |
 | TypeScript (web) | ✅ 0 errores | `cd web && npx tsc --noEmit` |
 
@@ -66,13 +66,14 @@ Dos plataformas que comparten el mismo motor y store:
 - `app/` — directorio de la app React Native (no creado)
 - `api/` — backend Node.js/Express (opcional)
 
-### 2.3 Estado del working tree
+### 2.3 Sesiones recientes
 
-⚠️ **Hay cambios SIN commit** (sesión del 11 sept 2026) — ver sección 17:
-- P1/P2: `SongViewPage` + `SongBody` (nuevos)
-- Fix: import roto de `SongEntry` en `@shared/types` (4 errores de tipo)
-- Fix: modo edición duplicaba canciones (nuevo `updateSong`)
-- Tests nuevos: `SongBody.test.tsx`, `SongViewPage.test.tsx`, `useSongStorage.test.tsx`
+Ver **sección 17** para el detalle completo. Resumen:
+- ✅ P1/P2: `SongViewPage` + `SongBody`
+- ✅ Fix: import roto de `SongEntry` en `@shared/types` (4 errores de tipo)
+- ✅ Fix: el modo edición duplicaba canciones (nuevo `updateSong`)
+- ✅ Fix: el deploy a GitHub Pages nunca funcionó (3 causas, sección 17.3)
+- ✅ Tests: de 11 a 28 en web (vitest)
 ---
 
 ## 3. Estructura de directorios actualizada
@@ -552,13 +553,24 @@ npm install react-svg-chord-diagram
 
 ## 14. Estado de deployment actual
 
-### 14.1 GitHub Pages (funcionando)
+### 14.1 GitHub Pages
 
-✅ **Deploy automático configurado**
-- URL: `https://wachin.github.io/strings-of-heaven/`
-- Workflow: `.github/workflows/deploy.yml` 
+🔴 **NUNCA HA ESTADO FUNCIONANDO.** La versión anterior de este handoff afirmaba
+"Deploy automático configurado ✅" con URL `https://wachin.github.io/strings-of-heaven/`,
+pero los 4 runs del workflow fallaron y el sitio nunca se publicó (esa URL devuelve
+el 404 del sitio Hugo del propietario). Ver **sección 17.3** para las causas y los
+arreglos ya aplicados.
+
+Configuración (ya corregida en el repo):
+- URL prevista: `https://wachin.github.io/strings-of-heaven/`
+- Workflow: `.github/workflows/deploy.yml`
 - Trigger: push a `main` branch
-- Base path: auto-detectado desde `GITHUB_REPOSITORY`
+- Base path: `VITE_BASE_PATH=/strings-of-heaven/` en el workflow (vite.config.ts
+  también sabe auto-detectarlo desde `GITHUB_REPOSITORY`)
+- Fallback SPA: `dist/404.html` + `dist/.nojekyll` generados por el plugin
+  `spaFallback()` de `vite.config.ts`
+
+**Pendiente del propietario:** `Settings → Pages → Source → GitHub Actions`.
 
 ### 14.2 Para deployments custom
 
@@ -648,27 +660,53 @@ id nuevo: editar creaba una segunda copia y la original quedaba intacta.
   Conserva `id` y `createdAt`, actualiza `updatedAt` y hace `version + 1`
   (coherente con el modelo documentado en `SongEntry`).
 
-### 17.3 Pendientes conocidos / decisiones del propietario
+### 17.3 Despliegue: por qué GitHub Pages nunca funcionó (corregido)
 
-1. **Fallback SPA en GitHub Pages (importante para compartir canciones).**
-   No existe `404.html` ni `.nojekyll` en `web/dist`, así que recargar o abrir
-   directamente `/song/:id` (o `/songs`, `/submit`…) da 404 en GitHub Pages.
-   Opciones:
-   - **A** (mínimo): publicar un `404.html` que redirija conservando la ruta
-     (técnica `spa-github-pages`), + `.nojekyll`.
-   - **B**: cambiar a `HashRouter` → URLs `#/song/abc`, deep links funcionan sin
-     servidor, pero cambia todas las URLs actuales.
-   → **Requiere decisión del propietario; no se ha tocado.**
+⚠️ **El handoff afirmaba "GitHub Pages ✅ funcionando" en
+`https://wachin.github.io/strings-of-heaven/`. Era FALSO: no se había publicado
+nunca.** Los 4 runs del workflow habían fallado. Tres causas encadenadas:
 
-2. **CI no valida la web.** `.github/workflows/deploy.yml` solo ejecuta
-   `npx tsc --noEmit` en la raíz (shared). Por eso los 4 errores de tipo de la web
-   llegaron a `main` sin detectarse. Recomendado añadir al workflow:
-   `npm run typecheck` y `npm run test` dentro de `web/`.
+**Bug 3 — El workflow no instalaba las dependencias de la raíz.**
+`deploy.yml` hacía `npm ci` **solo dentro de `web/`**, pero el paso
+"Type-check shared engine" ejecuta `tsc --noEmit` en la raíz, que necesita
+`typescript`, `@types/node` y `@types/jest` del `package.json` raíz. Sin
+`node_modules` en la raíz ese paso fallaba **siempre**, y el build/upload/deploy
+quedaban *skipped*. Nunca se subió nada.
+- **Fix:** paso `Install root dependencies` (`npm ci` en la raíz) + caché con
+  ambos lockfiles. Además el CI ahora ejecuta `npm run typecheck` y
+  `npm run test` en la raíz **y** en `web/`, para que los errores de tipo de la
+  web no vuelvan a llegar a `main` sin detectarse.
 
-3. **Licencia inconsistente en el footer.** `web/src/App.tsx` dice
-   *"open source, MIT licensed"*, pero `LICENSE` y `package.json` son **GPL-3.0-only**
-   (y el handoff lo confirma). Hay que corregir el texto del footer.
-   → **Requiere confirmación del propietario; no se ha tocado.**
+**Bug 4 — `BrowserRouter` sin `basename`: la app se salía del subdirectorio.**
+`main.tsx` montaba `<BrowserRouter>` sin `basename`. Publicada en
+`/strings-of-heaven/`, la ruta `/strings-of-heaven/` no coincidía con nada, así
+que el catch-all `<Navigate to="/" />` saltaba a `/`, es decir **al sitio Hugo
+del propietario**. El deploy podría haber "funcionado" y la app seguiría rota.
+- **Fix:** `web/src/router.ts` → `routerBasename(import.meta.env.BASE_URL)`
+  (quita la barra final; `""` en despliegue raíz) y se pasa a `BrowserRouter`.
+- **Test de regresión:** `web/src/__tests__/spaRouting.test.tsx` monta la app en
+  `/strings-of-heaven/song/:id` y verifica que resuelve la canción y que
+  `pathname` no se mueve. Verificado por mutación: con `basename=""` el test
+  falla con `expected '/' to be '/strings-of-heaven/song/song-9'`.
+
+**Bug 5 — Sin fallback SPA: recargar una URL profunda daba 404.**
+- **Fix:** plugin `spaFallback()` en `web/vite.config.ts` (hook `closeBundle`)
+  que copia `dist/index.html` → `dist/404.html` y crea `dist/.nojekyll`.
+  Es **agnóstico del base path**: la copia conserva las URLs absolutas de los
+  assets, así que al abrir `/strings-of-heaven/song/abc` GitHub Pages sirve
+  404.html, la app arranca en esa URL y el router (con basename) la resuelve.
+  No usa el truco de `sessionStorage` ni redirecciones.
+
+**Requisito manual del propietario (pendiente):**
+`Settings → Pages → Source` debe estar en **GitHub Actions**. La API de Pages del
+repo devolvía 404, lo que indica que Pages no estaba configurado como sitio.
+
+### 17.4 Pendiente único
+
+- **Licencia inconsistente en el footer.** `web/src/App.tsx` dice
+  *"open source, MIT licensed"*, pero `LICENSE` y `package.json` son **GPL-3.0-only**
+  (y la sección 15 lo confirma). Hay que corregir el texto del footer.
+  → **Requiere confirmación del propietario; no se ha tocado.**
 
 ---
 

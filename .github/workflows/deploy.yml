@@ -46,15 +46,33 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
+
+      # The root package holds the shared engine's toolchain (typescript, jest,
+      # @types/node, @types/jest). Without this step `tsc --noEmit` fails on a
+      # clean checkout, the build/deploy steps are skipped, and nothing ships.
+      - name: Install root dependencies
+        run: npm ci
 
       - name: Install web dependencies
         run: npm ci
         working-directory: web
 
       - name: Type-check shared engine
-        run: npx tsc --noEmit
-        working-directory: .
+        run: npm run typecheck
+
+      - name: Test shared engine
+        run: npx jest
+
+      - name: Type-check web app
+        working-directory: web
+        run: npm run typecheck
+
+      - name: Test web app
+        working-directory: web
+        run: npm run test
 
       - name: Build for GitHub Pages
         # VITE_BASE_PATH is read by vite.config.ts to set the correct base URL.
