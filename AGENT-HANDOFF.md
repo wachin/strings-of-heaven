@@ -4,7 +4,8 @@
 > El siguiente agente debe leerlo completo antes de escribir cualquier código.
 
 **Fecha de actualización:** Septiembre 11, 2026  
-**Estado:** Web app funcional + visualización individual de canciones (P1/P2 completadas)
+**Estado:** Web app **publicada y funcionando** en GitHub Pages + editor de catálogo de
+escritorio (PyQt6). Pendiente inmediato: que la web lea `shared/data/catalog/`.
 
 ---
 
@@ -48,14 +49,20 @@ Dos plataformas que comparten el mismo motor y store:
 | **Renderer de body con acordes clicables** | ✅ NUEVO - Completo | `web/src/components/SongBody.tsx` |
 | **Edición in-place (`updateSong`)** | ✅ NUEVO - Corregido | `web/src/hooks/useSongStorage.ts` |
 | **localStorage/API storage** | ✅ NUEVO - Completo | `web/src/hooks/useSongStorage.ts` |
+| **Autoría compartida (fuente única)** | ✅ NUEVO - Completo + tests | `shared/song/authoring.ts` |
+| **Editor de catálogo de escritorio** | ✅ NUEVO - PyQt6 | `tools/song-editor/` |
 | **GitHub Pages config** | ✅ NUEVO - Completo | `.github/workflows/deploy.yml` + config |
-| Tests (jest) | ✅ 75 pasando | `shared/__tests__/` |
+| Tests (jest) | ✅ 88 pasando | `shared/__tests__/` |
 | Tests (vitest) | ✅ 28 pasando | `web/src/__tests__/` |
-| TypeScript (shared) | ✅ 0 errores | `npx tsc --noEmit` |
+| TypeScript (shared + tools) | ✅ 0 errores | `npx tsc --noEmit` |
 | TypeScript (web) | ✅ 0 errores | `cd web && npx tsc --noEmit` |
 
 ### 2.2 Lo que NO existe todavía (próximas fases)
 
+- ⚠️ **La web NO lee `shared/data/catalog/`** — el editor guarda los JSON, pero
+  todavía no se ven en el navegador (siguiente tarea)
+- **Flujo de moderación** — envío → revisión humana → publicación (diseño acordado, sin construir)
+- **Backend Supabase** opcional para envíos compartidos (planificado)
 - **Panel de acordes lateral** — widget sticky con pestañas Guitar/Ukulele/Piano (P3)
 - **Transposición en vivo en UI** — controles +/- en la página de canción (P4)
 - **CapoSelector** — dropdown 0-12 con "sounding key" calculado (P5)
@@ -92,10 +99,12 @@ strings-of-heaven/
 │   ├── diagrams/               # Geometría SVG para diagramas
 │   ├── types.ts                # Tipos base (Instrument, ChordPosition, etc.)
 │   ├── types/
-│   │   └── song.ts             # ✅ NUEVO - Tipos completos para canciones
+│   │   └── song.ts             # ✅ Tipos de canción (SongEntry, SongDraft, labels)
+│   ├── song/
+│   │   └── authoring.ts        # ✅ NUEVO - validación, slug, parser Catalogo (fuente única)
 │   ├── config.ts               # ✅ NUEVO - Feature flags y configuración
-│   └── __tests__/              # Tests completos
-├── web/                        ✅ COMPLETO - Web app funcionando
+│   └── __tests__/              # Tests completos (88 pasando)
+├── web/                        ✅ COMPLETO - Web app publicada
 │   ├── src/
 │   │   ├── pages/
 │   │   │   ├── HomePage.tsx          # ✅ Página principal
@@ -111,18 +120,27 @@ strings-of-heaven/
 │   │   │   └── useSongStorage.ts     # ✅ NUEVO - Hook localStorage/API (+updateSong)
 │   │   ├── components/               # ✅ Componentes UI compartidos
 │   │   │   └── SongBody.tsx          # ✅ NUEVO - Body con acordes clicables
-│   │   ├── __tests__/                # ✅ Tests web (22 pasando)
+│   │   ├── router.ts                 # ✅ NUEVO - basename para el subdirectorio de Pages
+│   │   ├── __tests__/                # ✅ Tests web (28 pasando)
 │   │   ├── App.tsx                   # ✅ Router + navegación
 │   │   └── main.tsx                  # ✅ Entry point
-│   ├── dist/                         # ✅ Build output (GitHub Pages)
-│   ├── vite.config.ts                # ✅ NUEVO - Config con base path automático
+│   ├── dist/                         # Build output (git-ignored)
+│   ├── vite.config.ts                # ✅ base path, host IPv4+IPv6, fallback 404.html
 │   ├── package.json                  # ✅ Dependencias completas
 │   └── tailwind.config.js            # ✅ Tailwind CSS config
+├── tools/
+│   └── song-editor/            # ✅ NUEVO - Editor de catálogo PyQt6
+│       ├── main.py             # GUI: formulario, preview, badges, guardar JSON
+│       ├── bridge.py           # Puente Python ↔ Node (subprocess + JSON)
+│       ├── engine_cli.ts       # CLI que expone el motor TS real
+│       ├── requirements.txt    # PyQt6
+│       └── README.md           # Instrucciones y arquitectura
+├── Catalogo/                   # 271 canciones legacy (.txt) por revisar
 ├── scripts/
 │   └── process_chords.js       # regenera shared/data/*.json desde chords-db
 ├── third-party/                # submódulos de referencia (solo lectura)
-├── 8vo/                        # material de investigación/referencia UI
-├── README.md                   # ✅ ACTUALIZADO - documentación completa + deployment
+├── 8vo/                        # material de investigación (git-ignored)
+├── README.md                   # ✅ ACTUALIZADO - uso, canciones, deployment
 ├── ROADMAP.md
 └── AGENT-HANDOFF.md            # este archivo
 ```
@@ -463,17 +481,23 @@ cd web && npm install          # Instala deps de la web app
 # DESARROLLO WEB APP
 # ══════════════════════════════════════════════════════════════════
 cd web
-npm run dev                    # http://localhost:5173 (desarrollo)
+npm run dev                    # http://127.0.0.1:5173 (desarrollo; escucha IPv4 + IPv6)
 npm run build                  # Build para producción → web/dist/
 npm run preview                # Preview del build
+
+# ══════════════════════════════════════════════════════════════════
+# EDITOR DE CATÁLOGO (escritorio)
+# ══════════════════════════════════════════════════════════════════
+pip install -r tools/song-editor/requirements.txt   # PyQt6
+python tools/song-editor/main.py                    # escribe shared/data/catalog/*.json
 
 # ══════════════════════════════════════════════════════════════════
 # TESTS Y VALIDACIÓN  
 # ══════════════════════════════════════════════════════════════════
 cd ..                          # Volver a la raíz
-npx tsc --noEmit              # Type-check shared/ (debe ser 0 errores)
-npx jest                       # Tests shared/ (75 pasando, ~11s)
-cd web && npm run test         # Tests web/ (vitest, 22 pasando)
+npx tsc --noEmit              # Type-check shared/ + tools/ (debe ser 0 errores)
+npx jest                       # Tests shared/ (88 pasando, ~11s)
+cd web && npm run test         # Tests web/ (vitest, 28 pasando)
 cd web && npm run typecheck    # ⚠️ Type-check web/ (debe ser 0 errores — usar SIEMPRE)
 cd web && npm run build        # Verificar que el build de producción compila
 
@@ -617,26 +641,48 @@ VITE_API_BASE_URL=https://api.com   # Para modo servidor
 
 ## 16. Siguiente agente — Tareas inmediatas sugeridas
 
-### ✅ Opción A: Visualización de canciones — COMPLETADA (11 sept 2026)
-1. ~~Crear `SongViewPage` (`/song/:id`)~~ ✅
-2. ~~Componente `SongBody` para renderizar con acordes clicables~~ ✅
-3. ~~Agregar navegación desde `SongsPage` → click en canción → abrir `/song/:id`~~ ✅
+### 🔴 SIGUIENTE (bloquea todo lo demás): que la web lea el catálogo
 
-### Opción B: Panel de acordes lateral (SIGUIENTE RECOMENDADA — P3)
-1. Decidir si reutilizar los SVG custom existentes (`ChordDiagram.tsx` ya funciona)
-   en lugar de instalar `@tombatossals/react-chords`
-2. Crear componente `ChordsPanel` (pestañas Guitar/Ukulele/Piano)
-3. Integrar en `SongViewPage` como columna lateral sticky
+`tools/song-editor` ya escribe `shared/data/catalog/<slug>.json`, pero **la web
+todavía no los carga**. Sin esto, las canciones publicadas no se ven en el
+navegador ni en el móvil.
 
-### Opción C: Transposición + capo en la vista de canción (P4/P5)
-1. `TransposeControls` con estado local de semitonos → `transposeSongBody()`
-2. `CapoSelector` 0-12 + "Sounding key" calculado
-   - El motor ya expone `transposeSongBody`, `transposeChordName` y `transposeChordLine`
+1. Cargar los JSON con `import.meta.glob` (o un índice generado) desde
+   `shared/data/catalog/`.
+2. Mezclarlos con las canciones locales en `SongsPage` / `SongViewPage` /
+   `useSongStorage`.
+3. **Decisión ya tomada por el propietario:** las canciones del catálogo son
+   **públicas y de solo lectura** — se muestran con una etiqueta "Catalog" y
+   **sin** Edit/Delete. Las locales mantienen Edit/Delete. Las ediciones a una
+   canción publicada irán por un flujo de **"Sugerir cambio" → revisión humana**.
+4. Tests: catálogo + locales mezclados, y que un `id` del catálogo no ofrezca
+   editar ni borrar.
 
-### Opción D: Migración del catálogo (P9)
-1. Explorar estructura del directorio `Catalogo/`
-2. Crear script para convertir archivos existentes a `SongEntry[]`
-3. Función "Import from catalog" en la UI
+### 🔵 DESPUÉS: flujo de moderación (envío → revisión humana → publicación)
+
+Requisito del propietario, como en las webs de acordes: nada se publica sin que
+una persona lo revise. Diseño acordado:
+
+- Estados: `pending` → `approved` | `rejected` (con motivo visible).
+- Dos tipos: **canción nueva** y **sugerencia de edición** sobre una existente.
+- Tres caminos posibles (ver sección 18.5 en cuanto se decida):
+  1. **Pull Requests de GitHub** (gratis, sin infra, diff visible) — bueno si los
+     colaboradores se manejan con git.
+  2. **Supabase** con RLS: el colaborador solo puede insertar `pending`; **la
+     propia base de datos impide publicar** sin ser moderador.
+  3. **Híbrido**: envío por Supabase + publicación al catálogo de git.
+- **Pendiente de responder:** ¿los 3 colaboradores usan git o necesitan una web
+  con cuenta?
+
+### 🟢 Cuando lo anterior esté: features de la vista de canción
+
+- **P3** `ChordsPanel` — panel lateral con Guitar/Ukulele/Piano. Reutilizar los
+  SVG custom existentes (`ChordDiagram.tsx`) antes de instalar nada.
+- **P4/P5** `TransposeControls` + `CapoSelector` — el motor ya expone
+  `transposeSongBody`; "Sounding key" calculado.
+- **P6** Autoscroll · **P7** Impresión/PDF · **P8** Búsqueda global.
+- **Opción D (antigua P9)** — revisar las 271 canciones de `Catalogo/` con el
+  editor de escritorio (importar `.txt` → revisar → guardar JSON).
 
 **Recomendación:** **Opción B** (panel de acordes) o **Opción C** (transposición), que
 completan la experiencia de la vista de canción recién creada.

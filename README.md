@@ -1,12 +1,20 @@
 # 🎸 Strings Of Heaven
 
-> A cross-platform guitar, piano, and ukulele chord reference app — built with React Native and React.
+> An open-source guitar, piano, and ukulele chord reference app with your own song sheets — React + Redux on the web today, React Native planned.
 
-Strings Of Heaven is an open-source music reference tool that lets musicians look up chord diagrams, explore scales, and learn music theory fundamentals. It runs as a **native Android/iOS app** (React Native) and as a **progressive web app** (React + Redux), both sharing the same data engine and Redux store.
+Strings Of Heaven lets musicians look up chord diagrams, explore scales, learn music theory fundamentals, and **keep their own song sheets with chords**. The **web app** (React 18 + Redux Toolkit + Vite) is live; it shares its whole engine and store with a future **React Native** app.
+
+| | |
+|---|---|
+| **Live site** | <https://wachin.github.io/strings-of-heaven/> |
+| **Run it locally** | `cd web && npm run dev` → <http://127.0.0.1:5173/> |
+| **Add songs to the catalog** | `python tools/song-editor/main.py` → see [Desktop catalog editor](#desktop-catalog-editor-pyqt6) |
 
 ---
 
 ## Features
+
+### Chords, scales and theory
 
 - **Chord library** — browse all chords for any root note across guitar, piano, and ukulele
 - **Instrument toggle** — switch between guitar, piano, and ukulele diagrams for the same chord in one tap
@@ -17,21 +25,111 @@ Strings Of Heaven is an open-source music reference tool that lets musicians loo
 - **Dark / light mode**
 - **Offline-first** — all chord data is bundled locally; no external API calls required
 
+### Song sheets
+
+- **Song sheets with chords** — write lyrics with chord names aligned above the syllables
+- **Chords stay aligned** — each chord keeps its original column, so it sits exactly above the syllable it belongs to
+- **Clickable chords** — tap any chord in a song to open its diagram
+- **Section headers** — `[Verse 1]`, `[Chorus]`, `[Bridge]` are detected and styled
+- **Search & edit** — search your songs by title, artist or content; edit them in place
+- **Desktop catalog editor** — a PyQt6 app that publishes reviewed songs to everybody (see below)
+
+> Transposition already works in the engine (`transposeSongBody`) and is exposed to
+> the desktop editor, but the on-page **+/- transpose controls and the capo picker
+> are not built yet** — see [Roadmap](#roadmap).
+
 ---
 
 ## Tech stack
 
 | Layer | Technology |
 |---|---|
-| Mobile app | React Native + TypeScript |
+| Mobile app | React Native + TypeScript *(not created yet)* |
 | Web app | React 18 + Redux Toolkit + Vite + TypeScript |
-| Shared logic | Pure TypeScript (`shared/engine/`) |
+| Shared logic | Pure TypeScript (`shared/engine/`, `shared/song/`) |
 | State management | Redux Toolkit (same store shape on both platforms) |
 | SVG diagrams (web) | Custom SVG components (React) |
 | SVG diagrams (native) | `react-native-svg` (planned, Phase 3) |
 | Styling (web) | Tailwind CSS |
 | Styling (native) | NativeWind |
-| Navigation | React Navigation (stack + bottom tabs) |
+| Navigation | React Router 6 (web) · React Navigation (native, planned) |
+| Song storage | `localStorage` (private, per browser) + JSON catalog in the repo (public) |
+| Desktop catalog editor | Python 3 + PyQt6, calling the TypeScript engine through Node |
+
+---
+
+## Songs
+
+### Two places a song can live
+
+| | Private songs | Published catalog |
+|---|---|---|
+| **Where** | Your browser's `localStorage` | `shared/data/catalog/<slug>.json` in this repo |
+| **Who sees them** | Only you, **on that one device and browser** | Everybody, on every device |
+| **How they get there** | Filled in at `/submit` | Written by the [desktop editor](#desktop-catalog-editor-pyqt6), then committed |
+| **Editable in the browser** | Yes — Edit and Delete | No — repo content is the source of truth |
+| **Survives clearing browsing data** | No | Yes |
+
+> 🚧 **Status:** the desktop editor already writes the catalog files, but **the web
+> app does not read `shared/data/catalog/` yet**, so songs saved there are not shown
+> in the browser. That is the next task — see [Current status](#current-status).
+
+> ⚠️ `localStorage` is scoped per **device + browser + origin**. A song added at
+> `http://127.0.0.1:5173/` does **not** appear at
+> `https://wachin.github.io/strings-of-heaven/`, nor on your phone. To publish a
+> song for everyone, use the desktop editor.
+
+### The song body format
+
+```
+[Verse 1]
+G               Em
+Como el ciervo busca por las aguas,
+      C      G         C    D
+así clama mi alma por ti Señor.
+```
+
+- Section headers go in square brackets: `[Verse 1]`, `[Chorus]`, `[Bridge]`.
+- Chord names sit **alone on their own line**, above the lyric line they belong to.
+- Align each chord above the syllable where it changes — the spaces matter.
+- A line counts as a chord line when **more than half of its words are valid
+  chords** (`isChordLine`), which is why chords must not be mixed into a lyric line.
+
+Recognised chord names: `A`–`G` with `#`/`b`, plus `maj`, `min`, `m`, `dim`,
+`aug`, `sus`, `add`, numbers, and slash basses — e.g. `Em`, `F#m`, `Bb`, `Am7`,
+`Cadd9`, `Dsus4`, `G/B`.
+
+### Desktop catalog editor (PyQt6)
+
+A desktop form **identical to the web one** that writes one JSON file per song
+into `shared/data/catalog/`, so songs can be reviewed one at a time and then
+published for every device.
+
+```bash
+pip install -r tools/song-editor/requirements.txt   # needs PyQt6
+python tools/song-editor/main.py
+```
+
+Review the song, press **Save JSON**, then publish it yourself:
+
+```bash
+git add shared/data/catalog/
+git commit -m "catalog: add <song title>"
+git push          # GitHub Actions rebuilds and deploys in ~1 minute
+```
+
+It also includes **Import from `Catalogo/*.txt…`**, which reads the legacy
+plain-text song files and fills the form for you to review.
+
+**All the music logic lives in the shared TypeScript engine** — the editor only
+draws the result, so its validation can never drift from the website:
+
+```
+PyQt6 (main.py) ──JSON──▶ Node (engine_cli.ts) ──▶ shared/engine/*.ts
+                ◀────────                     ◀── shared/song/authoring.ts
+```
+
+Full details: [`tools/song-editor/README.md`](./tools/song-editor/README.md).
 
 ---
 
@@ -39,17 +137,34 @@ Strings Of Heaven is an open-source music reference tool that lets musicians loo
 
 ### GitHub Pages (Static Deployment)
 
-This project is configured for **GitHub Pages** deployment out of the box. The web app runs entirely in the browser with no backend required.
+This project is configured for **GitHub Pages** deployment out of the box. The web
+app runs entirely in the browser with no backend required.
+
+**Currently live at <https://wachin.github.io/strings-of-heaven/>.**
 
 #### Automatic Deployment
 
-1. **Enable GitHub Pages** in your repository settings:
+1. **Enable GitHub Pages** in your repository settings (one-time, already done here):
    - Go to `Settings` → `Pages`
-   - Set Source to `GitHub Actions`
+   - Set Source to **`GitHub Actions`** — *not* "Deploy from a branch"; a branch
+     source would publish the raw repository instead of the built app
 
-2. **Push to main branch** — the deployment workflow (`.github/workflows/deploy.yml`) will automatically:
-   - Build the web app with the correct base path
-   - Deploy to `https://<username>.github.io/<repository-name>/`
+2. **Push to `main`** — `.github/workflows/deploy.yml` will then:
+   - install the root and `web/` dependencies
+   - **type-check and test both workspaces** (so a broken commit cannot ship)
+   - build the app with the correct base path
+   - deploy to `https://<username>.github.io/<repository-name>/`
+
+#### Deep links work on Pages
+
+GitHub Pages has no SPA rewrite, so a URL like `/song/<id>` would normally 404.
+The `spaFallback()` plugin in `web/vite.config.ts` copies the built `index.html`
+to `dist/404.html` (plus a `.nojekyll`), so deep links boot the app at the
+requested URL instead. This is base-path agnostic: the copy keeps the same
+absolute asset URLs.
+
+> Right after a deploy the CDN may take a minute or two to serve every asset, so
+> brief 404s under `/assets/…` are normal.
 
 #### Manual Configuration
 
@@ -96,10 +211,16 @@ The `web/vite.config.ts` automatically detects the repository name from `GITHUB_
 3. **Implement the backend API** — the frontend expects these endpoints:
    ```
    GET    /api/songs           # List all songs
-   POST   /api/songs/upload    # Upload new song
-   GET    /api/songs/search    # Search songs
-   GET    /api/songs/:id       # Get specific song
+   POST   /api/songs/upload    # Upload new song       → { success, id }
+   GET    /api/songs/search?q= # Search songs
+   GET    /api/songs/:id       # Get a specific song   → { song }
+   PUT    /api/songs/:id       # Update a song         → { success, id }
+   DELETE /api/songs/:id       # Delete a song         → { success }
    ```
+
+   The `id`, `createdAt`, `updatedAt` and `version` fields are owned by the
+   storage layer; the JSON body you receive is a
+   [`SongDraft`](./shared/types/song.ts) (a `SongEntry` without those fields).
 
 4. **Deploy** to your preferred hosting provider:
    - **Vercel/Netlify**: Frontend deployment with serverless functions
@@ -135,23 +256,38 @@ Database: PostgreSQL       → Railway/Supabase
 
 ```
 /
-├── app/              # React Native — Android & iOS  (Phase 3, not created yet)
-├── web/              # React + Redux SPA  ✓ built (Vite)
-│   └── src/          # pages, components, hooks, tests
-├── shared/           # ✓ platform-agnostic code (used by web and future app)
+├── app/                  # React Native — Android & iOS  (Phase 3, not created yet)
+├── web/                  # ✓ React + Redux SPA (Vite) — deployed to GitHub Pages
+│   ├── src/
+│   │   ├── pages/        # Home, Explore, Chord, Scales, Theory, Songs, SongView, SubmitSong
+│   │   ├── components/   # diagrams, selectors, SongBody (clickable chords)
+│   │   ├── hooks/        # usePageTitle, useSongStorage (localStorage / API)
+│   │   └── __tests__/    # vitest tests
+│   ├── index.html
+│   └── vite.config.ts    # base path, dev server host, 404.html SPA fallback
+├── shared/               # ✓ platform-agnostic code (web today, app later)
 │   ├── engine/
 │   │   ├── chord_engine.ts     # chord lookup, position parsing, lazy data load
-│   │   └── music_theory.ts     # notes, intervals, scales, harmonization
-│   ├── store/       # Redux Toolkit store, slices, selectors, thunks
-│   ├── diagrams/     # pure geometry for fretboard & piano SVG
-│   ├── data/        # processed chord JSON (guitar / piano / ukulele)
+│   │   └── music_theory.ts     # notes, intervals, scales, song parser, transposition
+│   ├── song/authoring.ts       # ✓ validation, slugs, Catalogo/*.txt parser (single source of truth)
+│   ├── store/            # Redux Toolkit store, slices, selectors, thunks
+│   ├── diagrams/         # pure geometry for fretboard & piano SVG
+│   ├── data/             # processed chord JSON + catalog/ (published songs)
 │   ├── constants/theory.ts
-│   └── __tests__/   # jest tests (engine, store, diagrams)
+│   ├── types.ts          # Instrument, ChordPosition, …
+│   ├── types/song.ts     # SongEntry, SongDraft, label maps
+│   ├── config.ts         # feature flags, storage keys, API endpoint list
+│   └── __tests__/        # jest tests (engine, store, diagrams, authoring)
+├── tools/
+│   └── song-editor/      # ✓ PyQt6 desktop editor → writes shared/data/catalog/*.json
 ├── scripts/
-│   └── process_chords.js       # regenerates shared/data/*.json from chords-db
-├── api/              # Node.js / Express REST API (optional, later phase)
-├── third-party/      # Reference submodules (read-only — see below)
-├── ROADMAP.md        # Full implementation plan for AI-assisted development
+│   └── process_chords.js # regenerates shared/data/*.json from chords-db
+├── Catalogo/             # 271 legacy song sheets (.txt) still to be reviewed
+├── .github/workflows/    # deploy.yml — type-check, test, build and deploy to Pages
+├── api/                  # Node.js / Express REST API (optional, later phase)
+├── third-party/          # Reference submodules (read-only — see below)
+├── AGENT-HANDOFF.md      # Exact project state for the next agent
+├── ROADMAP.md            # Full implementation plan for AI-assisted development
 └── README.md
 ```
 
@@ -841,10 +977,47 @@ git submodule update --init --recursive
 ```bash
 cd web
 npm install      # only needed the first time
-npm run dev      # starts Vite at http://localhost:5173/
+npm run dev      # starts Vite on port 5173
 ```
 
-Open http://localhost:5173/ in your browser. Vite hot-reloads on file changes.
+Then open **<http://127.0.0.1:5173/>** in your browser.
+`http://localhost:5173/` works as well — see
+[Dev server addresses](#dev-server-addresses). Vite hot-reloads on every file
+change, so you can edit the code and refresh.
+
+#### What the dev server is for
+
+`http://127.0.0.1:5173/` is your **local development copy** of the app. It is the
+place to use the app and to check changes *before* they are published:
+
+| Page | What you can do there |
+|---|---|
+| `/` | Landing page and navigation |
+| `/explore`, `/chord/:key/:suffix` | Browse chords, switch instrument, see every voicing |
+| `/scales`, `/theory` | Scale viewer and music theory reference |
+| `/songs` | The songs **saved in this browser**; search, edit, delete |
+| `/song/:id` | A single song with clickable chords that open their diagram |
+| `/submit` | **Add or edit a song**, with live preview and chord detection |
+
+Songs added at `/submit` live in this browser's `localStorage`: they are private
+to this device and are **not** published. To publish a song so everybody — and
+your phone — can see it, use the
+[desktop catalog editor](#desktop-catalog-editor-pyqt6).
+
+#### Dev server addresses
+
+The dev server binds to every interface, so all of these work:
+
+| URL | Notes |
+|---|---|
+| `http://127.0.0.1:5173/` | IPv4 loopback |
+| `http://localhost:5173/` | Usually resolves to IPv6 first |
+| `http://[::1]:5173/` | IPv6 loopback |
+| `http://<your-lan-ip>:5173/` | From another device on the same network |
+
+Binding to IPv4 **and** IPv6 matters: Node can resolve `localhost` to IPv6 only,
+which leaves `http://127.0.0.1:5173/` refusing the connection even though the
+server is running. `server.host` in `web/vite.config.ts` handles this.
 
 #### Stopping the dev server
 
@@ -863,12 +1036,12 @@ From the repo root (shared engine + store) and from `web/`:
 
 ```bash
 # Type-check
-npx tsc --noEmit                 # repo root (shared)
+npx tsc --noEmit                 # repo root (shared/ + tools/)
 cd web && npx tsc --noEmit       # web app
 
 # Tests
-npx jest                         # root: engine, store, diagrams (75 tests)
-cd web && npx vitest run         # web: component tests (8 tests)
+npx jest                         # root: engine, store, diagrams, song authoring (88 tests)
+cd web && npx vitest run         # web: pages, components, routing (28 tests)
 cd web && npx vitest             # web: watch mode
 
 # Production build
@@ -877,6 +1050,20 @@ cd web && npm run build          # outputs to web/dist/
 # Preview the production build
 cd web && npm run preview
 ```
+
+The same checks run in CI on every push (`.github/workflows/deploy.yml`):
+type-check and tests for both `shared/` and `web/`, then the build and deploy.
+
+#### Desktop catalog editor
+
+```bash
+pip install -r tools/song-editor/requirements.txt
+python tools/song-editor/main.py
+```
+
+It bundles the TypeScript engine with the `esbuild` that ships with Vite, so no
+extra Node dependency is needed. See
+[`tools/song-editor/README.md`](./tools/song-editor/README.md).
 
 ### Run the Android app
 
@@ -945,6 +1132,17 @@ bumped once a dataset arrives so memoized selectors (`selectAllSuffixes`,
 
 ---
 
+## Documentation
+
+| Document | What it covers |
+|---|---|
+| **README.md** (this file) | What the project is, how to run it, how to publish songs |
+| [`ROADMAP.md`](./ROADMAP.md) | Full implementation plan, third-party submodule guide, data model, conventions |
+| [`AGENT-HANDOFF.md`](./AGENT-HANDOFF.md) | Exact project state for the next agent: what works, every bug found with its root cause, and what is pending |
+| [`tools/song-editor/README.md`](./tools/song-editor/README.md) | The desktop catalog editor: install, workflow, architecture |
+
+---
+
 ## Roadmap
 
 See [`ROADMAP.md`](./ROADMAP.md) for the full implementation plan, including:
@@ -955,16 +1153,40 @@ See [`ROADMAP.md`](./ROADMAP.md) for the full implementation plan, including:
 - Code conventions
 - MVP acceptance criteria
 
+### Current status
+
+| Area | State |
+|---|---|
+| Chord engine, scales, theory | ✅ Done, tested |
+| Web app (chords, scales, theory) | ✅ Live on GitHub Pages |
+| Song sheets: view, clickable chords, submit, edit in place | ✅ Done |
+| Desktop catalog editor (PyQt6) | ✅ Done |
+| **Web reading `shared/data/catalog/`** | ⏳ **Next** — songs saved by the editor are not shown in the browser yet |
+| Transpose / capo controls on the song page | ⏳ Pending (the engine already supports it) |
+| Chords panel (Guitar/Ukulele/Piano) beside the song | ⏳ Pending |
+| Autoscroll, print/PDF, global search | ⏳ Pending |
+| Moderation workflow (submit → human review → publish) | ⏳ Design agreed, not built |
+| Optional Supabase backend for shared submissions | ⏳ Planned |
+| React Native app | ⏳ Not started |
+
 ---
 
 ## Contributing
 
 Contributions are welcome. Before opening a pull request:
 
-1. Read `ROADMAP.md` to understand the intended architecture.
-2. Keep the `shared/engine/` logic platform-agnostic (pure TypeScript, no React imports).
-3. Follow the code conventions in section 7 of the ROADMAP.
-4. Add or update tests for any changes to `chord_engine.ts` or `music_theory.ts`.
+1. Read [`ROADMAP.md`](./ROADMAP.md) to understand the intended architecture.
+2. Keep `shared/` platform-agnostic — pure TypeScript, **no React and no Node APIs**.
+3. **Keep one source of truth.** Song validation, slugs and catalog parsing live
+   in `shared/song/authoring.ts`; the web form and the desktop editor both call
+   them. Never re-implement those rules a second time — in TypeScript or in Python.
+4. Follow the code conventions in section 7 of the ROADMAP.
+5. Run the checks before pushing — they are the same ones CI runs:
+
+```bash
+npx tsc --noEmit && npx jest            # root: shared/ + tools/
+cd web && npx tsc --noEmit && npm run test && npm run build
+```
 
 ---
 

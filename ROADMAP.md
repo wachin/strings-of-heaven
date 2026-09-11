@@ -1,5 +1,17 @@
 # ROADMAP: Guitar Chord & Music Theory App
 
+> ⚠️ **This is the original planning document.** Parts of it describe work that is
+> already finished, and parts describe features that changed shape along the way.
+> For the **current, accurate state of the project** — what works, every bug found
+> with its root cause, and what is pending — read
+> [`AGENT-HANDOFF.md`](./AGENT-HANDOFF.md). For day-to-day usage, read
+> [`README.md`](./README.md).
+>
+> Already done since this plan was written: the shared engine and store, the whole
+> web app (chords, scales, theory, **song sheets**, **song view**, submit and
+> edit), the GitHub Pages deployment, and the **PyQt6 desktop catalog editor**.
+> Not started: the React Native app and the optional REST API.
+
 > **Instructions for the AI agent:** This document is your complete guide to building an Android app (React Native) and a website (React + Redux) for guitar chords and music theory. The app supports **both guitar and piano chord diagrams** with a toggle between instruments. Read each section in order before writing any code. Use the `third-party/` repositories as data sources — use them as reference.
 
 ---
@@ -502,19 +514,21 @@ Chuan C. Chang's book on piano technique and practice. Useful for a "how to prac
 ```
 
 > **Note on `@tombatossals/react-chords`:** This library renders SVG chord diagrams for guitar, ukulele, **and piano** from the same `chords-db` data format. It is the recommended renderer for the web. In React Native the piano keyboard must be rendered manually with `react-native-svg` since the library targets the DOM.
-```
 
 ---
 
 ## 10. MVP acceptance criteria
 
-- [ ] A chord can be searched by root note + type and its diagram is displayed.
-- [ ] The guitar diagram correctly shows: frets, fingers, muted/open strings, barres, and base fret.
-- [ ] The piano diagram correctly shows: a keyboard with the chord's keys highlighted and scale degree labels.
-- [ ] The `InstrumentToggle` button switches between guitar and piano diagrams for the same chord without changing the selected note or type.
-- [ ] At least 2 different positions of the same guitar chord can be navigated (piano has a single position).
-- [ ] Notes of any scale can be viewed (major, minor, pentatonic, modes).
-- [ ] The website works correctly on mobile (responsive).
-- [ ] The app runs on Android (physical device or emulator).
-- [ ] Guitar data comes from `third-party/chords-db/lib/guitar.json` and piano data from `third-party/chords-db/lib/piano.json` (not hardcoded, no external API).
-- [ ] The `music_theory.js` engine has passing tests for at least: C major scale, Am natural minor, C major chord notes, Am7 chord notes.
+> Updated 11 Sept 2026 — the web platform's criteria are met and verified; only
+> the React Native app remains.
+
+- [x] A chord can be searched by root note + type and its diagram is displayed.
+- [x] The guitar diagram correctly shows: frets, fingers, muted/open strings, barres, and base fret.
+- [x] The piano diagram correctly shows: a keyboard with the chord's keys highlighted and scale degree labels.
+- [x] The `InstrumentToggle` button switches between guitar and piano diagrams for the same chord without changing the selected note or type.
+- [x] At least 2 different positions of the same guitar chord can be navigated (piano has a single position).
+- [x] Notes of any scale can be viewed (major, minor, pentatonic, modes).
+- [x] The website works correctly on mobile (responsive).
+- [ ] The app runs on Android (physical device or emulator). — **not started**
+- [x] Guitar data comes from `third-party/chords-db/lib/guitar.json` and piano data from `third-party/chords-db/lib/piano.json` (not hardcoded, no external API).
+- [x] The music theory engine has passing tests for at least: C major scale, Am natural minor, C major chord notes, Am7 chord notes.
