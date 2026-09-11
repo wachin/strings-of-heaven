@@ -701,12 +701,15 @@ del propietario**. El deploy podría haber "funcionado" y la app seguiría rota.
 `Settings → Pages → Source` debe estar en **GitHub Actions**. La API de Pages del
 repo devolvía 404, lo que indica que Pages no estaba configurado como sitio.
 
-### 17.4 Pendiente único
+### 17.4 Licencia — corregida ✅
 
-- **Licencia inconsistente en el footer.** `web/src/App.tsx` dice
-  *"open source, MIT licensed"*, pero `LICENSE` y `package.json` son **GPL-3.0-only**
-  (y la sección 15 lo confirma). Hay que corregir el texto del footer.
-  → **Requiere confirmación del propietario; no se ha tocado.**
+El footer de `web/src/App.tsx` decía *"open source, MIT licensed"*, lo que
+contradecía a `LICENSE`, `package.json` (`GPL-3.0-only`) y la sección 15. El
+propietario confirmó (11 sept 2026) que **la licencia correcta es GPL-3.0**, así
+que el footer ahora dice *"open source, GPL-3.0 licensed"*.
+
+`README.md` ya era correcto: su sección *License* declara GPL-3.0 para el proyecto
+y solo menciona MIT para los datos de terceros (`chords-db`), que es correcto.
 
 ---
 

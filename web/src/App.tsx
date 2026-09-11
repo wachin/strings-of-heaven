@@ -105,7 +105,7 @@ export default function App() {
 
       <footer className="border-t border-slate-200 dark:border-slate-800">
         <div className="mx-auto max-w-5xl px-4 py-4 text-sm text-slate-500 dark:text-slate-400">
-          Strings of Heaven — open source, MIT licensed. Chord data from chords-db (MIT).
+          Strings of Heaven — open source, GPL-3.0 licensed. Chord data from chords-db (MIT).
         </div>
       </footer>
     </div>
