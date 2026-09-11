@@ -709,7 +709,7 @@ del propietario**. El deploy podría haber "funcionado" y la app seguiría rota.
   No usa el truco de `sessionStorage` ni redirecciones.
 
 **Requisito del propietario — ✅ HECHO:** `Settings → Pages → Source` está en
-**GitHub Actions**. El deploy pasó a verde en el run `56c6f36` y el sitio quedó
+**GitHub Actions**. El deploy pasó a verde tras activar Pages y el sitio quedó
 publicado. (Nota: `GET /repos/.../pages` por API sin autenticar sigue devolviendo
 404 aunque Pages esté activo; no es un indicador fiable.)
 
@@ -722,6 +722,27 @@ que el footer ahora dice *"open source, GPL-3.0 licensed"*.
 
 `README.md` ya era correcto: su sección *License* declara GPL-3.0 para el proyecto
 y solo menciona MIT para los datos de terceros (`chords-db`), que es correcto.
+
+### 17.5 Dev server: `localhost:5173` no respondía
+
+**Síntoma:** `npm run dev` arrancaba bien, pero el navegador no podía abrir
+`http://localhost:5173/`.
+
+**Causa:** Node resolvía `localhost` a IPv6, así que Vite escuchaba **solo** en
+`[::1]:5173` (`LISTEN 0 511 [::1]:5173`). `curl http://localhost:5173/` funcionaba
+(porque curl también prefería IPv6) pero `http://127.0.0.1:5173/` daba
+conexión rechazada — y el navegador iba por IPv4.
+
+**Fix:** `server.host: true` en `web/vite.config.ts` → escucha en `*:5173`, es
+decir IPv4 e IPv6. Verificado: `127.0.0.1`, `localhost` y `[::1]` responden 200.
+
+⚠️ Ojo: `host: true` también expone el dev server a la LAN (puerto 5173 en la IP
+local). Es lo habitual en desarrollo, pero si se quiere solo loopback, usar
+`host: '127.0.0.1'`.
+
+**Lección para el próximo agente:** al verificar un servidor, comprobar la
+dirección que usará el usuario, no solo `localhost`. Un `localhost` que resuelve
+a IPv6 puede dar 200 mientras `127.0.0.1` falla.
 
 ---
 

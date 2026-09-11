@@ -62,6 +62,10 @@ export default defineConfig({
   },
   
   server: {
+    // Listen on IPv4 *and* IPv6. Without this, Node may bind "localhost" to
+    // [::1] only, so http://127.0.0.1:5173/ refuses the connection even though
+    // the server is running.
+    host: true,
     fs: {
       allow: [path.resolve(__dirname), path.resolve(__dirname, '..')],
     },
