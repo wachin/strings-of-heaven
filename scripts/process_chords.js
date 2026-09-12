@@ -9,6 +9,24 @@ const path = require('path');
 // Normalize chords-db key names to the app's canonical spelling ("Csharp" -> "C#").
 const KEY_NORMALIZE = { Csharp: 'C#', Fsharp: 'F#' };
 const normalizeKey = (key) => KEY_NORMALIZE[key] ?? key;
+
+/**
+ * Human-readable name for a chord.
+ *
+ * Slash chords are written as the chord over its bass note ("C7/G", "Cm/A"),
+ * not "C 7/G". Keep this in sync with `chordDisplayName` in
+ * shared/engine/chord_engine.ts, which is what the UI actually renders.
+ */
+function displayName(note, suffix) {
+  const slash = String(suffix).indexOf('/');
+  if (slash >= 0) {
+    const upper = String(suffix).slice(0, slash);
+    const bass = String(suffix).slice(slash + 1);
+    return `${note}${upper}/${bass}`;
+  }
+  return `${note} ${suffix}`;
+}
+
 function normalizeKeys(result) {
   const normalized = {};
   for (const [note, chords] of Object.entries(result)) {
@@ -48,7 +66,7 @@ function processGuitarChords(raw) {
       result[note].push({
         key,
         suffix,
-        displayName: `${note} ${suffix}`,
+        displayName: displayName(note, suffix),
         positions: uniquePositions
       });
     }
@@ -74,7 +92,7 @@ function processPianoChords(raw) {
       result[note].push({
         key,
         suffix,
-        displayName: `${key} ${suffix}`,
+        displayName: displayName(key, suffix),
         positions: [{
           frets: position.frets, // note names like ["C", "E", "G"]
           fingers: position.fingers,
@@ -108,7 +126,7 @@ function processUkuleleChords(raw) {
       result[note].push({
         key,
         suffix,
-        displayName: `${note} ${suffix}`,
+        displayName: displayName(note, suffix),
         positions: uniquePositions
       });
     }

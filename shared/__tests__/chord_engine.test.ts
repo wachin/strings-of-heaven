@@ -149,6 +149,14 @@ describe('display helpers', () => {
     expect(chordDisplayName('C', '13b9')).toBe('C 13b9');
   });
 
+  it('writes slash chords as the chord over its bass note', () => {
+    // A naive `note + " " + suffix` produced the unreadable "C 7/G".
+    expect(chordDisplayName('C', '7/G')).toBe('C7/G');
+    expect(chordDisplayName('C', 'm/A')).toBe('Cm/A');
+    expect(chordDisplayName('C', 'm9/Bb')).toBe('Cm9/Bb');
+    expect(chordDisplayName('C', '/G')).toBe('C/G');
+  });
+
   it('exposes all 12 keys', () => {
     expect(ALL_KEYS).toHaveLength(12);
     expect(ALL_KEYS[0]).toBe('C');

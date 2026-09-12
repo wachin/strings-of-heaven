@@ -17,6 +17,8 @@ Strings Of Heaven lets musicians look up chord diagrams, explore scales, learn m
 ### Chords, scales and theory
 
 - **Chord library** — browse all chords for any root note across guitar, piano, and ukulele
+- **Search by the name you already know** — type `Cm`, `Cdim7`, `C7/G`, `Csus4` or `Calt`, exactly as chord sites write them, as well as long names like `C Minor`
+- **Filter by chord type** — click a type chip to show only that type; click it again to clear the filter
 - **Instrument toggle** — switch between guitar, piano, and ukulele diagrams for the same chord in one tap
 - **Guitar diagrams** — accurate fret-grid SVG diagrams with finger positions, barres, muted strings, and multiple voicings per chord
 - **Piano diagrams** — keyboard SVG with highlighted keys and scale-degree labels per chord
@@ -1040,8 +1042,8 @@ npx tsc --noEmit                 # repo root (shared/ + tools/)
 cd web && npx tsc --noEmit       # web app
 
 # Tests
-npx jest                         # root: engine, store, diagrams, song authoring (88 tests)
-cd web && npx vitest run         # web: pages, components, routing (28 tests)
+npx jest                         # root: engine, store, diagrams, authoring, chord search (117 tests)
+cd web && npx vitest run         # web: pages, components, routing (37 tests)
 cd web && npx vitest             # web: watch mode
 
 # Production build

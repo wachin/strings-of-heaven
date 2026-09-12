@@ -52,8 +52,8 @@ Dos plataformas que comparten el mismo motor y store:
 | **Autoría compartida (fuente única)** | ✅ NUEVO - Completo + tests | `shared/song/authoring.ts` |
 | **Editor de catálogo de escritorio** | ✅ NUEVO - PyQt6 | `tools/song-editor/` |
 | **GitHub Pages config** | ✅ NUEVO - Completo | `.github/workflows/deploy.yml` + config |
-| Tests (jest) | ✅ 88 pasando | `shared/__tests__/` |
-| Tests (vitest) | ✅ 28 pasando | `web/src/__tests__/` |
+| Tests (jest) | ✅ 117 pasando | `shared/__tests__/` |
+| Tests (vitest) | ✅ 37 pasando | `web/src/__tests__/` |
 | TypeScript (shared + tools) | ✅ 0 errores | `npx tsc --noEmit` |
 | TypeScript (web) | ✅ 0 errores | `cd web && npx tsc --noEmit` |
 
@@ -103,7 +103,7 @@ strings-of-heaven/
 │   ├── song/
 │   │   └── authoring.ts        # ✅ NUEVO - validación, slug, parser Catalogo (fuente única)
 │   ├── config.ts               # ✅ NUEVO - Feature flags y configuración
-│   └── __tests__/              # Tests completos (88 pasando)
+│   └── __tests__/              # Tests completos (117 pasando)
 ├── web/                        ✅ COMPLETO - Web app publicada
 │   ├── src/
 │   │   ├── pages/
@@ -121,7 +121,7 @@ strings-of-heaven/
 │   │   ├── components/               # ✅ Componentes UI compartidos
 │   │   │   └── SongBody.tsx          # ✅ NUEVO - Body con acordes clicables
 │   │   ├── router.ts                 # ✅ NUEVO - basename para el subdirectorio de Pages
-│   │   ├── __tests__/                # ✅ Tests web (28 pasando)
+│   │   ├── __tests__/                # ✅ Tests web (37 pasando)
 │   │   ├── App.tsx                   # ✅ Router + navegación
 │   │   └── main.tsx                  # ✅ Entry point
 │   ├── dist/                         # Build output (git-ignored)
@@ -496,8 +496,8 @@ python tools/song-editor/main.py                    # escribe shared/data/catalo
 # ══════════════════════════════════════════════════════════════════
 cd ..                          # Volver a la raíz
 npx tsc --noEmit              # Type-check shared/ + tools/ (debe ser 0 errores)
-npx jest                       # Tests shared/ (88 pasando, ~11s)
-cd web && npm run test         # Tests web/ (vitest, 28 pasando)
+npx jest                       # Tests shared/ (117 pasando, ~12s)
+cd web && npm run test         # Tests web/ (vitest, 37 pasando)
 cd web && npm run typecheck    # ⚠️ Type-check web/ (debe ser 0 errores — usar SIEMPRE)
 cd web && npm run build        # Verificar que el build de producción compila
 
@@ -914,6 +914,82 @@ frontend.
 
 Alternativas evaluadas: Neon (no se pausa, despierta solo, pero sin Realtime ni
 editor de datos), Firebase, Appwrite (recortó el free), Render/Railway/Cloud Run.
+
+---
+
+## 19. Pestaña Explore: búsqueda y filtro por tipo (11 sept 2026)
+
+Reportado por el propietario. Los tres problemas se confirmaron leyendo el código
+**antes** de tocar nada:
+
+**Bug 6 — La búsqueda solo aceptaba el nombre largo o el sufijo crudo.**
+`ExplorePage` comparaba `displayName` ("C Minor") y `suffix` ("minor"), así que
+escribir `Cm`, `Cdim7` o `C7/G` — como se escriben en las webs de acordes — no
+encontraba nada.
+
+**Bug 7 — Los botones de tipo no hacían absolutamente nada.**
+`ExplorePage` filtraba **solo** por `query`; el `selectedSuffix` del store se
+actualizaba pero nunca se usaba para filtrar.
+
+**Bug 8 — "Major" salía marcado al entrar.**
+El estado del store arranca con `selectedSuffix: 'major'`, y Explore pintaba ese
+valor como seleccionado aunque no filtrara nada.
+
+### Arreglos
+
+- **`shared/engine/chord_engine.ts`**: nuevas `suffixSymbol(suffix)` y
+  `chordShorthand(note, suffix)` → `C`, `Cm`, `Cdim7`, `C7/G`, `Csus2sus4`. Usa
+  `CHORD_TYPE_INFO` para los que tienen símbolo y cae al propio sufijo para los
+  que no (`sus`, `alt`, `69`, `7/G`…), que ya se escriben así.
+- **`shared/engine/chord_search.ts`** (nuevo): `normalizeChordQuery`,
+  `chordSearchAliases`, `chordSearchScore` y `filterChordsByQuery`. Cada acorde
+  tiene alias (nombre largo, nombre de web, sufijo, símbolo, nombre del tipo) y la
+  coincidencia se puntúa: **exacta > prefijo > subcadena**. Si hay coincidencia
+  exacta, **solo** se devuelve esa (así `Cm` no arrastra Cmaj7 ni Cm6). Escribir
+  solo la raíz (`C`) **no** filtra, porque la página ya está acotada a esa raíz.
+- **`ExplorePage.tsx`**: el filtro de tipo pasa a ser **estado local** (`null` por
+  defecto ⇒ ningún chip marcado). Clic en un chip filtra; clic otra vez lo quita.
+  Se combina con la búsqueda. Si el sufijo no existe para la nueva raíz, el filtro
+  se descarta solo. Añadidos: contador con el filtro activo, botón **Clear
+  filters**, estado vacío con ejemplos y placeholder `(Cm, Cdim7, C7/G, Csus4)`.
+  Ya **no** usa el `selectedSuffix` global, así que Explore no altera el acorde
+  que ChordPage tenga seleccionado.
+- **Bug extra encontrado al escribir los tests**: `chordDisplayName('C','7/G')`
+  devolvía **"C 7/G"** (el `note + ' ' + suffix` naive). Ahora los slash chords se
+  muestran como **"C7/G"**, **"Cm/A"**, **"C/G"**. Corregido también en
+  `scripts/process_chords.js`, que es quien escribía `displayName: 'C 7/G'` en los
+  JSON (el generador no puede importar el motor, así que lleva una copia pequeña y
+  comentada; hay que mantenerlas en sync).
+
+### Verificación (navegador real, no solo tests)
+
+Se condujo **Chrome real por DevTools Protocol** (Python + `websockets`) sobre
+`http://127.0.0.1:5173/explore`:
+
+| Acción | Resultado observado |
+|---|---|
+| Al entrar | 70 acordes, **ningún** chip marcado |
+| Buscar `Cm` | 1 → `C Minor` |
+| Buscar `C7/G` | 1 → `C7/G` |
+| Buscar `Cdim7` | 1 → `C Diminished 7th` |
+| Buscar `C Diminished 7th` | 1 → el mismo |
+| Clic `Minor` | marcado, 1 → `C Minor` |
+| Clic `Minor` otra vez | desmarcado, vuelven los 70 |
+| Clic `alt` | marcado, 1 → `C alt` |
+| Buscar `zzz` | 0 |
+
+Tests: `shared/__tests__/chord_search.test.ts` (28 casos, incluye **todas** las
+grafías pedidas), `chord_engine.test.ts` (slash chords) y
+`web/src/__tests__/ExplorePage.test.tsx` (9). Totales: **117 jest + 37 vitest**.
+
+**Receta reutilizable** para probar interacción real (no solo `--dump-dom`):
+lanzar `google-chrome --headless=new --remote-debugging-port=9224`, conectar por
+websocket al target `type == 'page'`, y para escribir en un input de React usar el
+setter nativo:
+```js
+const s = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;
+s.call(input, 'Cm'); input.dispatchEvent(new Event('input', {bubbles:true}));
+```
 
 ---
 

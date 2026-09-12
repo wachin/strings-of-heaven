@@ -179,11 +179,48 @@ export function canonicalTypeForSuffix(suffix: string): string | undefined {
   return SUFFIX_TO_CANONICAL[suffix];
 }
 
-/** Build a display name like "C Major" from root + suffix. */
+/**
+ * Build a display name from root + suffix: "C Major", "C Diminished 7th".
+ *
+ * Slash chords read as the chord over its bass note — "C7/G", "Cm/A" — the way
+ * musicians and chord sites write them, instead of the "C 7/G" that a naive
+ * `note + " " + suffix` produces.
+ */
 export function chordDisplayName(note: string, suffix: string): string {
+  const slashIndex = suffix.indexOf('/');
+  if (slashIndex >= 0) {
+    const upper = suffix.slice(0, slashIndex);
+    const bass = suffix.slice(slashIndex + 1);
+    return `${chordShorthand(note, upper)}/${bass}`;
+  }
+
   const info = CHORD_TYPE_INFO[SUFFIX_TO_CANONICAL[suffix] ?? ''];
   const label = info ? info.name : suffix;
   return `${note} ${label}`;
+}
+
+/**
+ * Short symbol for a chords-db suffix, as written on chord sites:
+ * "major" → "", "minor" → "m", "dim7" → "dim7".
+ *
+ * Returns `undefined` for suffixes with no canonical type (e.g. "sus",
+ * "sus2sus4", "7sus4", "alt", "69", "7/G"), because for those the suffix itself
+ * already is the chord-site spelling.
+ */
+export function suffixSymbol(suffix: string): string | undefined {
+  const info = CHORD_TYPE_INFO[SUFFIX_TO_CANONICAL[suffix] ?? ''];
+  return info?.symbol;
+}
+
+/**
+ * The name musicians actually type: `C`, `Cm`, `Cdim7`, `C7/G`, `Csus2sus4`.
+ *
+ * This is the spelling chord websites use, and it is what the Explore search
+ * accepts in addition to the long display name ("C Diminished 7th").
+ */
+export function chordShorthand(note: string, suffix: string): string {
+  const symbol = suffixSymbol(suffix);
+  return `${note}${symbol ?? suffix}`;
 }
 
 /** Suffix used by chords-db for a canonical engine type. */
