@@ -1079,4 +1079,52 @@ da «0 tarjetas», comprobar primero `ss -ltn | grep 5173` antes de sospechar de
 
 ---
 
+## 21. Documentación generada + decisiones del propietario (11 sept 2026)
+
+### 21.1 `docs/CHORD_NAMES.md` — referencia generada
+
+El propietario pidió una lista exacta y correcta por nota para que los
+desarrolladores sepan qué se muestra en la página (fuente: chords-db). Se creó la
+carpeta **`docs/`** con **`CHORD_NAMES.md`**, que contiene:
+
+- Resumen: guitarra 68–70 por nota (828 en total), ukelele 46 (552), piano 44 (528).
+- Las 12 notas de `ALL_KEYS` y sus grafías enarmónicas aceptadas.
+- **La lista completa por nota e instrumento**, en bloques `<details>`.
+- Tabla de **qué acordes faltan en cada nota** (el caso de los slash chords).
+- Tabla de **nombres exclusivos de un instrumento**.
+- Aviso de dos nombres ambiguos de ukelele (`Cb13b9`, `Cb13#9`).
+
+**Es generado, no escrito a mano:**
+
+```bash
+npm run docs:chords     # scripts/generate_chord_names.mjs → docs/CHORD_NAMES.md
+```
+
+- `scripts/generate_chord_names.ts` es el generador: usa el **mismo motor** que la
+  UI (`chordShorthand`), así que lo listado es exactamente lo que acepta el
+  buscador y lo que muestran las tarjetas.
+- `scripts/generate_chord_names.mjs` lo empaqueta con el **esbuild de Vite** (sin
+  dependencia nueva) y escribe el archivo.
+- **CI lo verifica** (`.github/workflows/deploy.yml`, paso *Check the generated
+  chord reference is up to date*): regenera y hace `git diff --exit-code docs/`,
+  así que **el documento no puede quedar desactualizado**.
+
+⚠️ Lección al generarlo: la primera versión comparaba **sufijos** crudos y por eso
+listaba `Cm` como «solo de piano» (guitarra guarda `minor`, piano `m`, pero ambos
+muestran `Cm`). Corregido comparando **nombres**.
+
+### 21.2 Decisiones tomadas por el propietario
+
+| Tema | Decisión |
+|---|---|
+| **Moderación / ediciones** | **Ninguno de los 3 colaboradores sabe usar git.** Por tanto la opción de *Pull Requests* queda **descartada**: el flujo de envío → revisión humana → publicación tiene que ser **una web con cuentas (Supabase)**, no git. Ver sección 16. |
+| **Conectar la web al catálogo** | **Mañana.** Antes quiere revisar y añadir canciones una a una con el editor PyQt6 (`tools/song-editor`). |
+| **Orden de trabajo** | 1) Él añade canciones con el editor. 2) Se conecta la web a `shared/data/catalog/`. 3) Flujo de moderación con Supabase. |
+
+Sigue en pie la decisión ya registrada: las canciones del catálogo se muestran en
+**solo lectura**, con un botón **"Sugerir cambio"** que pasa por revisión, en lugar
+de Edit/Delete directos.
+
+---
+
 **Estado: LISTO PARA CONTINUAR** ✅

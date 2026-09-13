@@ -74,6 +74,13 @@ jobs:
         working-directory: web
         run: npm run test
 
+      - name: Check the generated chord reference is up to date
+        # docs/CHORD_NAMES.md is generated from the chord data. Regenerate it and
+        # fail if the committed copy differs, so the reference cannot go stale.
+        run: |
+          npm run docs:chords
+          git diff --exit-code docs/
+
       - name: Build for GitHub Pages
         # VITE_BASE_PATH is read by vite.config.ts to set the correct base URL.
         # Change the value if your repository has a different name.

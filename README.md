@@ -326,6 +326,10 @@ The search itself is guaranteed complete by
 `shared/__tests__/chord_search.test.ts`: for all 12 notes and all 3 instruments,
 **every chord in the database is findable by typing its own name**.
 
+📋 **The exact name list per note and instrument is in
+[`docs/CHORD_NAMES.md`](./docs/CHORD_NAMES.md)**, generated from this data with
+`npm run docs:chords`.
+
 | Submodule | Content | Used for | Source files |
 |---|---|---|---|
 | [`tombatossals/chords-db`](https://github.com/tombatossals/chords-db) | Guitar, piano, ukulele JSON — primary database | Chord diagrams (all instruments) | `third-party/chords-db/lib/{guitar,piano,ukulele}.json` → processed by `scripts/process_chords.js` into `shared/data/{guitar,piano,ukulele}_chords.json` |
@@ -1166,9 +1170,19 @@ bumped once a dataset arrives so memoized selectors (`selectAllSuffixes`,
 | Document | What it covers |
 |---|---|
 | **README.md** (this file) | What the project is, how to run it, how to publish songs |
+| [`docs/CHORD_NAMES.md`](./docs/CHORD_NAMES.md) | **Every chord name the app can show**, per root note and instrument, generated from the data |
 | [`ROADMAP.md`](./ROADMAP.md) | Full implementation plan, third-party submodule guide, data model, conventions |
 | [`AGENT-HANDOFF.md`](./AGENT-HANDOFF.md) | Exact project state for the next agent: what works, every bug found with its root cause, and what is pending |
 | [`tools/song-editor/README.md`](./tools/song-editor/README.md) | The desktop catalog editor: install, workflow, architecture |
+
+The chord reference is generated, never hand-written:
+
+```bash
+npm run docs:chords     # rewrites docs/CHORD_NAMES.md from the chord databases
+```
+
+CI regenerates it and fails if the committed copy differs, so it cannot drift
+away from the data.
 
 ---
 
