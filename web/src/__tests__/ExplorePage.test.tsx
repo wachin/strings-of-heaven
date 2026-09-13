@@ -18,7 +18,7 @@ function renderExplore() {
 
 /** The "N chords for C on guitar" line. */
 function countLine(): string {
-  return screen.getByText(/chords? for C on guitar/).textContent ?? '';
+  return screen.getByRole('status').textContent ?? '';
 }
 
 function typeButton(label: string): HTMLElement {
@@ -132,5 +132,76 @@ describe('ExplorePage — search', () => {
 
     await user.click(screen.getAllByRole('button', { name: 'Clear filters' })[0]);
     expect(screen.getByText('C Major')).toBeInTheDocument();
+  });
+});
+
+describe('ExplorePage — searching another note', () => {
+  const search = () => screen.getByRole('searchbox', { name: 'Search chords' });
+
+  it('follows the note the query names', async () => {
+    const user = userEvent.setup();
+    renderExplore();
+    expect(countLine()).toContain('for C on guitar');
+
+    await user.type(search(), 'Ebm');
+
+    expect(countLine()).toContain('1 chord for Eb on guitar');
+    expect(screen.getByText('Eb Minor')).toBeInTheDocument();
+  });
+
+  it('accepts the note in either spelling', async () => {
+    const user = userEvent.setup();
+    renderExplore();
+
+    await user.type(search(), 'D#m');
+
+    // "D#" is the same pitch as "Eb", which is the spelling the page uses.
+    expect(countLine()).toContain('for Eb on guitar');
+    expect(screen.getByText('Eb Minor')).toBeInTheDocument();
+  });
+
+  it('lights up the note button it switched to', async () => {
+    const user = userEvent.setup();
+    renderExplore();
+
+    await user.type(search(), 'F#maj7');
+
+    expect(screen.getByRole('button', { name: 'F#' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'C' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText('F# Major 7th')).toBeInTheDocument();
+  });
+
+  it('stays on the current note when the query fits there', async () => {
+    const user = userEvent.setup();
+    renderExplore();
+
+    // "add9" starts with the letter A but is a suffix, not the note A.
+    await user.type(search(), 'add9');
+
+    expect(countLine()).toContain('for C on guitar');
+    expect(screen.getByText('C Add 9')).toBeInTheDocument();
+  });
+
+  it('goes back to the chosen note when the search is cleared', async () => {
+    const user = userEvent.setup();
+    renderExplore();
+
+    await user.type(search(), 'Ebm');
+    expect(countLine()).toContain('for Eb');
+
+    await user.clear(search());
+    expect(countLine()).toContain('for C on guitar');
+    expect(screen.getByText('C Major')).toBeInTheDocument();
+  });
+
+  it('picking a note by hand clears the search', async () => {
+    const user = userEvent.setup();
+    renderExplore();
+
+    await user.type(search(), 'Ebm');
+    await user.click(screen.getByRole('button', { name: 'G' }));
+
+    expect(search()).toHaveValue('');
+    expect(countLine()).toContain('for G on guitar');
   });
 });

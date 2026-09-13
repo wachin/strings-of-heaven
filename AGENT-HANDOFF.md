@@ -52,8 +52,8 @@ Dos plataformas que comparten el mismo motor y store:
 | **Autoría compartida (fuente única)** | ✅ NUEVO - Completo + tests | `shared/song/authoring.ts` |
 | **Editor de catálogo de escritorio** | ✅ NUEVO - PyQt6 | `tools/song-editor/` |
 | **GitHub Pages config** | ✅ NUEVO - Completo | `.github/workflows/deploy.yml` + config |
-| Tests (jest) | ✅ 117 pasando | `shared/__tests__/` |
-| Tests (vitest) | ✅ 37 pasando | `web/src/__tests__/` |
+| Tests (jest) | ✅ 130 pasando | `shared/__tests__/` |
+| Tests (vitest) | ✅ 43 pasando | `web/src/__tests__/` |
 | TypeScript (shared + tools) | ✅ 0 errores | `npx tsc --noEmit` |
 | TypeScript (web) | ✅ 0 errores | `cd web && npx tsc --noEmit` |
 
@@ -103,7 +103,7 @@ strings-of-heaven/
 │   ├── song/
 │   │   └── authoring.ts        # ✅ NUEVO - validación, slug, parser Catalogo (fuente única)
 │   ├── config.ts               # ✅ NUEVO - Feature flags y configuración
-│   └── __tests__/              # Tests completos (117 pasando)
+│   └── __tests__/              # Tests completos (130 pasando)
 ├── web/                        ✅ COMPLETO - Web app publicada
 │   ├── src/
 │   │   ├── pages/
@@ -121,7 +121,7 @@ strings-of-heaven/
 │   │   ├── components/               # ✅ Componentes UI compartidos
 │   │   │   └── SongBody.tsx          # ✅ NUEVO - Body con acordes clicables
 │   │   ├── router.ts                 # ✅ NUEVO - basename para el subdirectorio de Pages
-│   │   ├── __tests__/                # ✅ Tests web (37 pasando)
+│   │   ├── __tests__/                # ✅ Tests web (43 pasando)
 │   │   ├── App.tsx                   # ✅ Router + navegación
 │   │   └── main.tsx                  # ✅ Entry point
 │   ├── dist/                         # Build output (git-ignored)
@@ -496,8 +496,8 @@ python tools/song-editor/main.py                    # escribe shared/data/catalo
 # ══════════════════════════════════════════════════════════════════
 cd ..                          # Volver a la raíz
 npx tsc --noEmit              # Type-check shared/ + tools/ (debe ser 0 errores)
-npx jest                       # Tests shared/ (117 pasando, ~12s)
-cd web && npm run test         # Tests web/ (vitest, 37 pasando)
+npx jest                       # Tests shared/ (130 pasando, ~13s)
+cd web && npm run test         # Tests web/ (vitest, 43 pasando)
 cd web && npm run typecheck    # ⚠️ Type-check web/ (debe ser 0 errores — usar SIEMPRE)
 cd web && npm run build        # Verificar que el build de producción compila
 
@@ -990,6 +990,92 @@ setter nativo:
 const s = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;
 s.call(input, 'Cm'); input.dispatchEvent(new Event('input', {bubbles:true}));
 ```
+
+---
+
+## 20. Búsqueda en las 12 notas + auditoría del catálogo (11 sept 2026)
+
+El propietario entregó su lista completa de nombres (69 por nota, 14 notas) y pidió
+que el buscador los reconociera **todos**, no solo los ejemplos de C.
+
+### Auditoría: qué existe realmente
+
+Se generó la lista real de nombres desde el propio motor (no a ojo) para las 12
+notas × 3 instrumentos:
+
+| Instrumento | Acordes por nota | Particularidades |
+|---|---|---|
+| Guitarra | **70** | El set más completo, con slash chords |
+| Ukelele | **46** | Sin slash chords; extras `13b9`, `m9b5`, `b13b9` |
+| Piano | **44** | Sin slash ni `sus`; escribe `7sharp9`, `9sharp11`, `maj7sharp5` |
+
+**Notas de la página = `ALL_KEYS` = 12**: `C, C#, D, Eb, E, F, F#, G, Ab, A, Bb, B`
+(bemoles, **no** `D#`/`G#`/`A#`). La búsqueda acepta ambas grafías.
+
+**La lista del propietario es correcta para C** (los 69 existen); solo se le olvidó
+**`C9`**. Para las demás notas tiene errores **sistemáticos en los slash chords**,
+porque chords-db no incluye todas las inversiones y el bajo cambia con la raíz:
+
+- **`X7/G` solo existe para C.** D, Eb, E, F, F#, G, Ab, A, Bb y B **no tienen
+  ningún acorde `7/…`**.
+- **`Xm9/Bb` y `Xm9/Eb` son exclusivos de C.** Reales: D→`Dm9/C`,`Dm9/F`;
+  G→`Gm9/F`,`Gm9/Bb`; Ab→`Abm9/F#`,`Abm9/B`.
+- **`X/X` y `Xm/X` (bajo = la propia raíz) no existen para ninguna nota.** Para C
+  el propietario ya los omitió; para las demás los incluyó de más.
+- **`Ab` no tiene `sus2sus4`.**
+
+Nombres de su lista que **no existen en guitarra** (54 en total):
+
+| Nota | No existen |
+|---|---|
+| C | — (falta añadir `C9`) |
+| C# | `C#7/G`, `C#m9/Bb`, `C#m9/Eb`, `C#m/C#`, `C#/C#` |
+| D | `D7/G`, `Dm9/Bb`, `Dm9/Eb`, `Dm/D`, `D/D` |
+| Eb | `Eb7/G`, `Ebm9/Bb`, `Ebm9/Eb`, `Ebm/Eb`, `Eb/Eb` |
+| E | `E7/G`, `Em9/Bb`, `Em9/Eb`, `Em/E`, `E/E` |
+| F | `F7/G`, `Fm9/Bb`, `Fm/F`, `F/F` |
+| F# | `F#7/G`, `F#m9/Bb`, `F#m9/Eb`, `F#m/F#`, `F#/F#` |
+| G | `G7/G`, `Gm9/Eb`, `Gm/G`, `G/G` |
+| Ab | `Absus2sus4`, `Ab7/G`, `Abm9/Bb`, `Abm9/Eb`, `Abm/Ab`, `Ab/Ab` |
+| A | `A7/G`, `Am9/Bb`, `Am9/Eb`, `Am/A`, `A/A` |
+| Bb | `Bb7/G`, `Bbm9/Bb`, `Bbm9/Eb`, `Bbm/Bb`, `Bb/Bb` |
+| B | `B7/G`, `Bm9/Bb`, `Bm9/Eb`, `Bm/B`, `B/B` |
+
+En ukelele faltan 360 de sus 840 nombres y en piano 396 — normal: esos
+instrumentos tienen menos acordes.
+
+### Cambios en el código
+
+- **`chordShorthand`** ahora normaliza `sharp` → `#`, así el piano responde a
+  `C7#9`, `C9#11`, `Cmaj7#5` (antes generaba `C7sharp9`, que nadie escribe).
+- **`chord_engine.ts`**: nuevas `canonicalRoot(note)` (cualquier grafía → la de
+  `ALL_KEYS`, insensible a mayúsculas: `"eb"`→`"Eb"`, `"H"`→`undefined`) y
+  `rootSpellings(note)` (`"Eb"`→`["Eb","D#"]`).
+- **`chord_search.ts`**: `chordSearchAliases` añade el nombre del acorde en **cada
+  grafía enarmónica** de la raíz, así `D#m` encuentra `Eb minor`. Nuevas
+  `splitRootFromQuery` y `rootFromQuery`.
+- **`ExplorePage.tsx`**: si la consulta no encuentra nada en la nota actual y
+  empieza por otra nota, **cambia a esa nota** (`Ebm` con C abierto → Eb). El
+  cambio solo ocurre cuando hace falta, así `add9` **no** se interpreta como la
+  nota A. La nota efectiva se refleja en el contador y en los botones de nota.
+  Elegir una nota a mano limpia la búsqueda.
+- El contador de resultados pasó a `role="status"` (accesible y estable para tests).
+
+### Verificación
+
+- **Test de propiedad** en `chord_search.test.ts`: para las 12 notas × 3
+  instrumentos, **todo acorde de la base es encontrable por su propio nombre**.
+- **Chrome real** con los 69 nombres de la lista de C: **68/69 devuelven
+  exactamente 1 acorde**. El único que no filtra es escribir solo `C`, que devuelve
+  los 70 — **es intencional**: si solo escribes la nota raíz, la página ya está
+  acotada a ella.
+- Chrome real, otros casos: `C9`→C Dominant 9th · `Ebm` y `D#m`→**Eb Minor** ·
+  `F#maj7`→F# Major 7th · `G#dim7`→**Ab Diminished 7th** · `Bbmaj9`→Bb Major 9th ·
+  `D7/G`→0 (correcto, no existe).
+- Totales: **130 jest + 43 vitest**.
+
+⚠️ **El dev server de fondo se cae entre turnos.** Si una verificación en navegador
+da «0 tarjetas», comprobar primero `ss -ltn | grep 5173` antes de sospechar del código.
 
 ---
 

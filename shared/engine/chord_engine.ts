@@ -96,6 +96,33 @@ export function resolveKey(note: string, instrument: Instrument): string {
   return key;
 }
 
+/**
+ * The page spelling for any accepted note name: "Db" → "C#", "D#" → "Eb",
+ * "G#" → "Ab". Returns `undefined` when the text is not a note at all.
+ *
+ * `ALL_KEYS` is what the note buttons and the chord search use, so mapping any
+ * enharmonic spelling onto it lets a user type `D#m` and still find `Eb minor`.
+ */
+export function canonicalRoot(note: string): string | undefined {
+  const trimmed = note.trim();
+  // Accept lowercase input from the search box: "ebm" → "Eb".
+  const key = normalizeKey(trimmed.charAt(0).toUpperCase() + trimmed.slice(1));
+  const keys: readonly string[] = ALL_KEYS;
+  if (keys.includes(key)) return key;
+  const alt = ENHARMONIC[key];
+  return alt && keys.includes(alt) ? alt : undefined;
+}
+
+/**
+ * Every spelling of a note's pitch class, itself first: "Eb" → ["Eb", "D#"].
+ * Used so a chord is findable however the musician spells its root.
+ */
+export function rootSpellings(note: string): string[] {
+  const key = normalizeKey(note);
+  const alt = ENHARMONIC[key];
+  return alt ? [key, alt] : [key];
+}
+
 // ---------------------------------------------------------------------------
 // Lookups
 // ---------------------------------------------------------------------------
@@ -217,10 +244,13 @@ export function suffixSymbol(suffix: string): string | undefined {
  *
  * This is the spelling chord websites use, and it is what the Explore search
  * accepts in addition to the long display name ("C Diminished 7th").
+ *
+ * Some databases spell alterations out — the piano set has `7sharp9` and
+ * `maj7sharp5` — so `sharp` is folded back to `#`, giving `C7#9` and `Cmaj7#5`.
  */
 export function chordShorthand(note: string, suffix: string): string {
   const symbol = suffixSymbol(suffix);
-  return `${note}${symbol ?? suffix}`;
+  return `${note}${(symbol ?? suffix).replace(/sharp/g, '#')}`;
 }
 
 /** Suffix used by chords-db for a canonical engine type. */

@@ -10,10 +10,19 @@
  * Matching is scored, and an exact hit wins outright: typing `Cm` returns only
  * C minor, not also Cmaj7 and Cm6. Partial searches still work — they return
  * everything that matches, best first.
+ *
+ * Roots are accepted in any spelling: a chord stored as `Eb` is also findable as
+ * `D#m`, because every enharmonic spelling of the root is part of its aliases.
  */
 
-import { chordDisplayName, chordShorthand, suffixSymbol } from './chord_engine';
-import { canonicalTypeForSuffix } from './chord_engine';
+import {
+  canonicalRoot,
+  canonicalTypeForSuffix,
+  chordDisplayName,
+  chordShorthand,
+  rootSpellings,
+  suffixSymbol,
+} from './chord_engine';
 import { CHORD_TYPE_INFO } from '../constants/theory';
 import type { ProcessedChord } from '../types';
 
@@ -37,12 +46,32 @@ export function normalizeChordQuery(value: string): string {
 }
 
 /**
+ * Split a leading note name off a query: `"Ebm7"` → `{ root: "Eb", route: "m7" }`.
+ *
+ * This is deliberately naive — it only reports what the query *looks* like. The
+ * caller decides whether to act on it, which is what stops `add9` from being read
+ * as "the note A".
+ */
+export function splitRootFromQuery(query: string): { root: string | null; route: string } {
+  const match = /^\s*([A-Ga-g][#b]?)(.*)$/.exec(query);
+  if (!match) return { root: null, route: query };
+  return { root: match[1], route: match[2] };
+}
+
+/** The page (ALL_KEYS) spelling of the root a query begins with, if any. */
+export function rootFromQuery(query: string): string | null {
+  const { root } = splitRootFromQuery(query);
+  return root ? canonicalRoot(root) ?? null : null;
+}
+
+/**
  * Every spelling that should find this chord:
  *
  * | Alias | Example for C minor |
  * |---|---|
  * | long display name | `C Minor` |
  * | chord-site name | `Cm` |
+ * | enharmonic root spellings | `D#m` for Eb minor |
  * | raw database suffix | `minor` |
  * | short symbol | `m` |
  * | canonical type name | `Minor` |
@@ -51,8 +80,12 @@ export function chordSearchAliases(chordKey: string, suffix: string): string[] {
   const aliases = new Set<string>();
 
   aliases.add(chordDisplayName(chordKey, suffix));
-  aliases.add(chordShorthand(chordKey, suffix));
   aliases.add(suffix);
+
+  // So "Eb minor" also answers to "D#m", and vice versa.
+  for (const spelling of rootSpellings(chordKey)) {
+    aliases.add(chordShorthand(spelling, suffix));
+  }
 
   const symbol = suffixSymbol(suffix);
   if (symbol) aliases.add(symbol);

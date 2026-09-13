@@ -18,6 +18,7 @@ Strings Of Heaven lets musicians look up chord diagrams, explore scales, learn m
 
 - **Chord library** — browse all chords for any root note across guitar, piano, and ukulele
 - **Search by the name you already know** — type `Cm`, `Cdim7`, `C7/G`, `Csus4` or `Calt`, exactly as chord sites write them, as well as long names like `C Minor`
+- **Search any note from one box** — type `Ebm` or `D#m` while C is open and the page follows the note you named; every enharmonic spelling works (`D#`=`Eb`, `G#`=`Ab`, `A#`=`Bb`, `Db`=`C#`, `Gb`=`F#`)
 - **Filter by chord type** — click a type chip to show only that type; click it again to clear the filter
 - **Instrument toggle** — switch between guitar, piano, and ukulele diagrams for the same chord in one tap
 - **Guitar diagrams** — accurate fret-grid SVG diagrams with finger positions, barres, muted strings, and multiple voicings per chord
@@ -298,6 +299,32 @@ Database: PostgreSQL       → Railway/Supabase
 ## Chord data sources
 
 All chord data is bundled locally from open-source databases. No external API is called at runtime.
+
+### How many chords each instrument has
+
+The root notes on the Explore page are the 12 in `ALL_KEYS`:
+**C, C#, D, Eb, E, F, F#, G, Ab, A, Bb, B** — note the flat spellings (`Eb`, `Ab`,
+`Bb`), not `D#`/`G#`/`A#`. The search accepts either spelling anyway.
+
+| Instrument | Chords per root note | Notes |
+|---|---|---|
+| Guitar | **70** | The most complete set, including slash chords |
+| Ukulele | **46** | No slash chords; a few extras such as `13b9`, `m9b5` |
+| Piano | **44** | No slash chords and no `sus`; stores alterations as `7sharp9` |
+
+Two consequences worth knowing:
+
+- **Not every chord exists for every instrument.** `C7/G` exists on guitar but not
+  on ukulele or piano; the page says so instead of showing an empty grid.
+- **Not every inversion exists for every root, even on guitar.** chords-db only
+  ships some slash chords, and the bass note changes with the root: `C7/G` exists
+  but **D has no `7/…` chord at all**; `Cm9/Bb` and `Cm9/Eb` exist while D has
+  `Dm9/C` and `Dm9/F`. A bass note equal to the root (`C/C`, `Dm/D`) never exists.
+  `Ab` also has no `sus2sus4`.
+
+The search itself is guaranteed complete by
+`shared/__tests__/chord_search.test.ts`: for all 12 notes and all 3 instruments,
+**every chord in the database is findable by typing its own name**.
 
 | Submodule | Content | Used for | Source files |
 |---|---|---|---|
@@ -1042,8 +1069,8 @@ npx tsc --noEmit                 # repo root (shared/ + tools/)
 cd web && npx tsc --noEmit       # web app
 
 # Tests
-npx jest                         # root: engine, store, diagrams, authoring, chord search (117 tests)
-cd web && npx vitest run         # web: pages, components, routing (37 tests)
+npx jest                         # root: engine, store, diagrams, authoring, chord search (130 tests)
+cd web && npx vitest run         # web: pages, components, routing (43 tests)
 cd web && npx vitest             # web: watch mode
 
 # Production build

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { chordShorthand, getChordsForKey } from '@shared/engine/chord_engine';
-import { filterChordsByQuery } from '@shared/engine/chord_search';
+import { filterChordsByQuery, rootFromQuery } from '@shared/engine/chord_search';
+import type { ProcessedChord } from '@shared/types';
 import {
   selectChordKey,
   selectDataEpoch,
@@ -27,20 +28,47 @@ export function ExplorePage() {
    */
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
-  const chords = useMemo(
+  // Chords of the note chosen with the buttons above.
+  const selectedChords = useMemo(
     () => getChordsForKey(selectedKey, instrument),
     [selectedKey, instrument, dataEpoch],
   );
 
-  // A suffix can be missing for some root notes (e.g. "Caug9" exists but
-  // "G#aug9" may not), so drop the filter when it no longer applies.
+  /**
+   * The search may name a different root note — typing `Ebm` while C is open.
+   * It only takes over when the current note has nothing to offer, so `add9`
+   * is never mistaken for "the note A".
+   */
+  const matchesCurrentNote = useMemo(() => {
+    const list = typeFilter
+      ? selectedChords.filter((chord) => chord.suffix === typeFilter)
+      : selectedChords;
+    return filterChordsByQuery(list, query);
+  }, [selectedChords, typeFilter, query]);
+
+  const searchedKey = useMemo(() => {
+    if (matchesCurrentNote.length > 0) return null;
+    const root = rootFromQuery(query);
+    return root && root !== selectedKey ? root : null;
+  }, [matchesCurrentNote.length, query, selectedKey]);
+
+  // When the search named another note, list that note's chords instead.
+  const chords: ProcessedChord[] = searchedKey
+    ? getChordsForKey(searchedKey, instrument)
+    : selectedChords;
+  const effectiveKey = searchedKey ?? selectedKey;
+
+  // A suffix can be missing for some root notes, so drop the filter when the
+  // note in view has no such chord.
   const activeType =
     typeFilter && chords.some((chord) => chord.suffix === typeFilter) ? typeFilter : null;
 
-  const filtered = useMemo(() => {
-    const byType = activeType ? chords.filter((chord) => chord.suffix === activeType) : chords;
-    return filterChordsByQuery(byType, query);
-  }, [chords, activeType, query]);
+  const filtered = searchedKey
+    ? filterChordsByQuery(
+        activeType ? chords.filter((chord) => chord.suffix === activeType) : chords,
+        query,
+      )
+    : matchesCurrentNote;
 
   const hasFilters = activeType !== null || query.trim() !== '';
 
@@ -49,12 +77,18 @@ export function ExplorePage() {
     setQuery('');
   }
 
+  function selectNote(key: string) {
+    // Picking a note by hand overrides whatever the search was pointing at.
+    dispatch(selectChordKey(key));
+    setQuery('');
+  }
+
   return (
     <section className="space-y-5">
       <h1 className="text-2xl font-bold">Chord library</h1>
 
       <div className="space-y-3">
-        <NoteSelector selected={selectedKey} onSelect={(key) => dispatch(selectChordKey(key))} />
+        <NoteSelector selected={effectiveKey} onSelect={selectNote} />
         <ChordTypeSelector
           suffixes={chords.map((chord) => chord.suffix)}
           selected={activeType ?? undefined}
@@ -66,21 +100,27 @@ export function ExplorePage() {
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search chords… (Cm, Cdim7, C7/G, Csus4)"
+          placeholder="Search any chord… (Cm, Cdim7, C7/G, Ebm, F#maj9)"
           aria-label="Search chords"
           className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
       </div>
 
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          {filtered.length} {filtered.length === 1 ? 'chord' : 'chords'} for {selectedKey} on{' '}
-          {instrument}
+        <p
+          role="status"
+          className="text-sm text-slate-500 dark:text-slate-400"
+        >
+          {filtered.length} {filtered.length === 1 ? 'chord' : 'chords'} for{' '}
+          <span className="font-semibold text-slate-700 dark:text-slate-200">
+            {effectiveKey}
+          </span>{' '}
+          on {instrument}
           {activeType && (
             <>
               {' · '}
               <span className="font-semibold text-slate-700 dark:text-slate-200">
-                {chordShorthand(selectedKey, activeType)}
+                {chordShorthand(effectiveKey, activeType)}
               </span>{' '}
               only
             </>
@@ -100,12 +140,15 @@ export function ExplorePage() {
       {filtered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 p-10 text-center dark:border-slate-700">
           <p className="text-slate-500 dark:text-slate-400">
-            No chords match “{query.trim()}”.
+            No chords match “{query.trim()}” for {instrument}.
           </p>
           <p className="mt-2 text-sm text-slate-400 dark:text-slate-500">
             Try a chord-site name such as <code>Cm</code>, <code>Cdim7</code>,{' '}
-            <code>C7/G</code> or <code>Csus4</code> — or the long name, like{' '}
+            <code>C7/G</code> or <code>Csus4</code>, or the long name{' '}
             <code>C Minor</code>.
+          </p>
+          <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">
+            Not every chord exists for every instrument — {instrument} has fewer than guitar.
           </p>
           <button
             type="button"
