@@ -145,12 +145,16 @@ describe('display helpers', () => {
     expect(chordDisplayName('A', 'm7b5')).toBe('A Half-Diminished');
   });
 
-  it('falls back to the raw suffix for unknown types', () => {
-    expect(chordDisplayName('C', '13b9')).toBe('C 13b9');
+  it('falls back to the chord-site spelling for unknown types', () => {
+    // This used to be "C 13b9": the raw suffix glued on with a space.
+    expect(chordDisplayName('C', '13b9')).toBe('C13b9');
+    expect(chordDisplayName('C', 'sus2sus4')).toBe('Csus2sus4');
+    expect(chordDisplayName('C', 'mmaj11')).toBe('Cmmaj11');
+    expect(chordDisplayName('C', 'alt')).toBe('Calt');
+    expect(chordDisplayName('C', '69')).toBe('C69');
   });
 
   it('writes slash chords as the chord over its bass note', () => {
-    // A naive `note + " " + suffix` produced the unreadable "C 7/G".
     expect(chordDisplayName('C', '7/G')).toBe('C7/G');
     expect(chordDisplayName('C', 'm/A')).toBe('Cm/A');
     expect(chordDisplayName('C', 'm9/Bb')).toBe('Cm9/Bb');

@@ -207,23 +207,16 @@ export function canonicalTypeForSuffix(suffix: string): string | undefined {
 }
 
 /**
- * Build a display name from root + suffix: "C Major", "C Diminished 7th".
+ * Build a display name from root + suffix.
  *
- * Slash chords read as the chord over its bass note — "C7/G", "Cm/A" — the way
- * musicians and chord sites write them, instead of the "C 7/G" that a naive
- * `note + " " + suffix` produces.
+ * Known types get their full name — "C Major", "C Diminished 7th". Everything
+ * else falls back to the chord-site spelling: "C7/G", "Csus2sus4", "Cmmaj11",
+ * "Calt", "C69". The fallback used to be `note + " " + suffix`, which produced
+ * the unreadable "C 7/G", "C sus2sus4" and "C mmaj11" on the cards.
  */
 export function chordDisplayName(note: string, suffix: string): string {
-  const slashIndex = suffix.indexOf('/');
-  if (slashIndex >= 0) {
-    const upper = suffix.slice(0, slashIndex);
-    const bass = suffix.slice(slashIndex + 1);
-    return `${chordShorthand(note, upper)}/${bass}`;
-  }
-
   const info = CHORD_TYPE_INFO[SUFFIX_TO_CANONICAL[suffix] ?? ''];
-  const label = info ? info.name : suffix;
-  return `${note} ${label}`;
+  return info ? `${note} ${info.name}` : chordShorthand(note, suffix);
 }
 
 /**
